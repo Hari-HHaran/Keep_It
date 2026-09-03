@@ -24,6 +24,12 @@ interface ManagerDashboardProps {
   onUpdateState: (newState: AppState) => void;
   onSelectLocation: (location: LocationMerchant | null) => void;
   onViewDependent: (dependentId: string) => void;
+  /** Persists a transaction to Supabase via /api/ledger. */
+  onCreateTransaction?: (tx: Omit<Transaction, "id">) => Promise<void> | void;
+  /** Persists a voucher redemption via /api/vouchers. */
+  onRedeemVoucher?: (voucherId: string, amount: number) => Promise<void> | void;
+  /** Persists a newly claimed voucher via /api/vouchers. */
+  onAddVoucher?: (voucher: GovernmentVoucher) => Promise<void> | void;
   isOcrOpen: boolean;
   setIsOcrOpen: (open: boolean) => void;
 }
@@ -35,6 +41,9 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onUpdateState,
   onSelectLocation,
   onViewDependent,
+  onCreateTransaction,
+  onRedeemVoucher,
+  onAddVoucher,
   isOcrOpen,
   setIsOcrOpen,
 }) => {
@@ -54,6 +63,10 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   };
 
   const handleAddTransaction = (tx: Omit<Transaction, "id">) => {
+    if (onCreateTransaction) {
+      void onCreateTransaction(tx);
+      return;
+    }
     const { state: nextState } = addTransactionToState(state, tx);
     onUpdateState(nextState);
   };
@@ -65,22 +78,34 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       amount: -receipt.totalAmount,
       category: receipt.category,
       source: "Cash Receipt",
-      memberId: state.members[0]?.id || "mem-meiling",
+      memberId: state.members[0]?.id || "",
       opportunityCostNote: receipt.suggestedVoucherCategory === "CDC_Supermarket"
         ? "CDC Supermarket vouchers could have covered this cash expense!"
         : undefined,
     };
 
+    if (onCreateTransaction) {
+      void onCreateTransaction(tx);
+      return;
+    }
     const { state: nextState } = addTransactionToState(state, tx);
     onUpdateState(nextState);
   };
 
   const handleRedeemVoucher = (voucherId: string, amount: number) => {
+    if (onRedeemVoucher) {
+      void onRedeemVoucher(voucherId, amount);
+      return;
+    }
     const nextState = redeemVoucherInState(state, voucherId, amount);
     onUpdateState(nextState);
   };
 
   const handleAddVoucher = (voucher: GovernmentVoucher) => {
+    if (onAddVoucher) {
+      void onAddVoucher(voucher);
+      return;
+    }
     const nextState = claimNewVoucherInState(state, voucher);
     onUpdateState(nextState);
   };
@@ -88,19 +113,23 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   const handleSendPocketMoney = (dependentId: string, amount: number) => {
     const tx: Omit<Transaction, "id"> = {
       date: "Just now",
-      description: "Pocket money to Jia Le (PayNow)",
+      description: `Pocket money to ${state.members.find((m) => m.id === dependentId)?.name || "dependent"} (PayNow)`,
       amount: -amount,
       category: "Pocket Money",
       source: "PayNow",
       recipientId: dependentId,
-      memberId: state.members[0]?.id || "mem-meiling",
+      memberId: state.members[0]?.id || state.members[0]?.id || "",
     };
 
+    if (onCreateTransaction) {
+      void onCreateTransaction(tx);
+      return;
+    }
     const { state: nextState } = addTransactionToState(state, tx);
     onUpdateState(nextState);
   };
 
-  const isMarcusGigPersona = state.currentPersonaId === "marcus_gig" || state.gigProfile !== undefined;
+  const isMarcusGigPersona = state.gigProfile !== undefined;
 
   // Map view tab
   if (activeTab === "map") {

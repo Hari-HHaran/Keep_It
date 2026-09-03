@@ -1,0 +1,3090 @@
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/.env.example Keep_It-main/keepit-app/.env.example
+--- orig/Keep_It-main/keepit-app/.env.example	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/.env.example	2026-09-03 09:30:49.051636923 +0000
+@@ -1,7 +1,9 @@
+ # Copy this file to .env.local and fill in your Supabase values.
++# Supabase Dashboard > Project Settings > API
++
+ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY
++NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
+ 
+-# Keep demo mode enabled as a presentation fallback.
+-# The real backend is used automatically whenever a user is authenticated.
+-NEXT_PUBLIC_ENABLE_DEMO_MODE=true
++# SERVER ONLY — bypasses row-level security. Never commit, never expose
++# to the browser, never put in a NEXT_PUBLIC_ variable.
++SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/AUTH-INTEGRATION.md Keep_It-main/keepit-app/AUTH-INTEGRATION.md
+--- orig/Keep_It-main/keepit-app/AUTH-INTEGRATION.md	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/AUTH-INTEGRATION.md	1970-01-01 00:00:00.000000000 +0000
+@@ -1,188 +0,0 @@
+-# KeepIt registration and login patch
+-
+-This patch adds the complete registration, login, logout, session-checking and household-onboarding flow to the existing KeepIt Next.js application.
+-
+-It is intended for the KeepIt project supplied in the final merged bundle. The files use their correct repository paths, so extracting the patch into the repository root replaces matching integration files instead of creating duplicate pages.
+-
+-## How the flow works
+-
+-```mermaid
+-flowchart TD
+-    A["Register page"] --> B["POST /api/auth/signup"]
+-    B --> C["Supabase Auth session"]
+-    C --> D["POST /api/onboarding"]
+-    D --> E["Household records"]
+-    E --> F["Dashboard"]
+-    G["Login page"] --> H["POST /api/auth/login"]
+-    H --> C
+-```
+-
+-Supabase stores the session in secure cookies. The dashboard then calls `/api/household` to load the signed-in user's household. The header calls `/api/auth/logout` when the user signs out.
+-
+-## Files included
+-
+-### Frontend
+-
+-- `src/app/register/page.tsx`
+-- `src/app/login/page.tsx`
+-- `src/app/page.tsx`
+-- `src/components/layout/Header.tsx`
+-
+-### Backend routes
+-
+-- `src/app/api/auth/signup/route.ts`
+-- `src/app/api/auth/login/route.ts`
+-- `src/app/api/auth/logout/route.ts`
+-- `src/app/api/auth/me/route.ts`
+-- `src/app/api/onboarding/route.ts`
+-- `src/app/api/household/route.ts`
+-- `src/app/api/health/route.ts`
+-
+-### Backend helpers
+-
+-- `src/lib/supabase/config.ts`
+-- `src/lib/supabase/client.js`
+-- `src/lib/supabase/server.js`
+-- `src/lib/backend/household.ts`
+-- `src/lib/api.ts`
+-- `src/lib/types.ts`
+-
+-### Configuration and verification
+-
+-- `.env.example`
+-- `.gitignore`
+-- `supabase/schema.sql`
+-- `scripts/verify-backend.mjs`
+-
+-## 1. Copy the patch into the repository
+-
+-Make a safety branch before copying:
+-
+-```powershell
+-git switch -c add-authentication
+-```
+-
+-Place `KeepIt-auth-backend-patch.zip` in the folder containing `package.json`, then extract it directly into that folder:
+-
+-```powershell
+-Expand-Archive -Path .\KeepIt-auth-backend-patch.zip -DestinationPath . -Force
+-```
+-
+-The archive contains the correct `src/...`, `supabase/...` and `scripts/...` paths. Do not create a second `src` folder manually.
+-
+-## 2. Install the authentication packages
+-
+-```powershell
+-npm install @supabase/ssr @supabase/supabase-js
+-npm pkg set scripts.verify:backend="node scripts/verify-backend.mjs"
+-```
+-
+-This updates `package.json` and `package-lock.json`. Commit both files, but never commit `node_modules`.
+-
+-## 3. Configure Supabase
+-
+-Create the local environment file:
+-
+-```powershell
+-Copy-Item .env.example .env.local
+-```
+-
+-Update `.env.local`:
+-
+-```env
+-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
+-NEXT_PUBLIC_ENABLE_DEMO_MODE=true
+-```
+-
+-Never add a Supabase service-role key and never commit `.env.local`.
+-
+-In the Supabase dashboard:
+-
+-1. Open **SQL Editor**.
+-2. Copy the complete contents of `supabase/schema.sql`.
+-3. Run the SQL.
+-4. For a quick hackathon flow, open **Authentication → Providers → Email** and temporarily disable mandatory email confirmation.
+-
+-## 4. Run and verify
+-
+-Start the application:
+-
+-```powershell
+-npm run dev
+-```
+-
+-Open:
+-
+-- <http://localhost:3000/register>
+-- <http://localhost:3000/login>
+-- <http://localhost:3000/api/health>
+-
+-In a second terminal:
+-
+-```powershell
+-npm run verify:backend
+-```
+-
+-The live backend should report `database: reachable` and `mode: supabase`.
+-
+-## 5. Test the full authentication flow
+-
+-1. Register at `/register`.
+-2. Complete all four onboarding steps.
+-3. Confirm the app redirects to `/`.
+-4. Check Supabase for new rows in `profiles`, `households`, `household_members` and `bank_accounts`.
+-5. Use the profile menu to sign out.
+-6. Sign in again at `/login`.
+-7. Confirm the same household reloads.
+-
+-## 6. Check and commit only the intended changes
+-
+-Run:
+-
+-```powershell
+-npm run build
+-git status
+-```
+-
+-Stage the patch and dependency files:
+-
+-```powershell
+-git add .env.example .gitignore
+-git add package.json package-lock.json
+-git add scripts/verify-backend.mjs
+-git add supabase/schema.sql
+-git add src/app/register src/app/login src/app/api/auth
+-git add src/app/api/onboarding src/app/api/household src/app/api/health
+-git add src/app/page.tsx src/components/layout/Header.tsx
+-git add src/lib/supabase src/lib/backend/household.ts src/lib/api.ts src/lib/types.ts
+-```
+-
+-Review the staged file summary:
+-
+-```powershell
+-git diff --cached --stat
+-```
+-
+-Confirm that secret and generated files are not staged:
+-
+-```powershell
+-git diff --cached --name-only | Select-String "node_modules|\.next|\.env\.local"
+-```
+-
+-That command should return nothing.
+-
+-Commit and push the branch:
+-
+-```powershell
+-git commit -m "Add Supabase registration and login flow"
+-git push -u origin add-authentication
+-```
+-
+-You can merge the `add-authentication` branch into `main` on GitHub after confirming that the build passes.
+-
+-## Important overwrite note
+-
+-The patch intentionally updates `src/app/page.tsx`, `Header.tsx`, `types.ts`, `api.ts` and `schema.sql` because those files connect authentication to the existing dashboard. If you edited any of them after downloading the final KeepIt bundle, compare the changes in VS Code before committing.
+-
+-Do not create files such as `page-copy.tsx`, `page2.tsx` or a second Supabase client. Next.js routes must remain in the exact paths listed above.
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/DEPLOYMENT.md Keep_It-main/keepit-app/DEPLOYMENT.md
+--- orig/Keep_It-main/keepit-app/DEPLOYMENT.md	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/DEPLOYMENT.md	1970-01-01 00:00:00.000000000 +0000
+@@ -1,61 +0,0 @@
+-# Deployment & Live Demo Guide: KeepIt
+-
+-## 🌐 Deploying to Vercel (1-Click Free Hosting)
+-
+-KeepIt is a pure Next.js 15 zero-boilerplate app, designed to deploy directly to Vercel with zero additional configuration.
+-
+-### Option 1: Deploy via Vercel CLI
+-```bash
+-# Install Vercel CLI globally
+-npm install -g vercel
+-
+-# Inside keepit-app directory:
+-cd C:\Users\dkuma\.gemini\antigravity\scratch\keepit-app
+-vercel
+-```
+-Follow the interactive prompts:
+-- Set up and deploy `keepit-app`? **Yes**
+-- Which scope? **Your Account**
+-- Link to existing project? **No**
+-- Project name? **keepit-app**
+-- Directory? `./`
+-- Modify settings? **No**
+-
+-### Option 2: Push to GitHub & Link to Vercel UI
+-1. Create a new repository on GitHub (e.g. `keepit-hackathon-2026`).
+-2. Push your project:
+-   ```bash
+-   git init
+-   git add .
+-   git commit -m "feat: KeepIt full-stack hackathon prototype"
+-   git branch -M main
+-   git remote add origin https://github.com/<your-username>/<repo-name>.git
+-   git push -u origin main
+-   ```
+-3. Go to [https://vercel.com/new](https://vercel.com/new), select your repository, and click **Deploy**.
+-
+----
+-
+-## 🗄️ Connecting to Cloud Supabase (Optional Post-Hackathon)
+-
+-KeepIt comes pre-configured with local persistent data state. To connect to a live Supabase PostgreSQL instance:
+-
+-1. Create a project on [https://supabase.com](https://supabase.com).
+-2. Create `.env.local` inside `keepit-app/`:
+-   ```env
+-   NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+-   ```
+-3. Use the schema definitions in `src/lib/types.ts` to create the tables `households`, `members`, `transactions`, `vouchers`, and `gig_profiles`.
+-
+----
+-
+-## 🎤 Step-by-Step Live Demo Flow (3 Minutes Pitch Script)
+-
+-| Step | Persona | What to Show & Say |
+-|---|---|---|
+-| **1. Hook & Overview** | **Tan Family** | "Good afternoon. Meet Mei Ling from the Tan family. After Seedly discontinued in Dec 2025, Singapore families lost multi-bank visibility. KeepIt consolidates DBS, OCBC, and PayNow into one ledger, alongside $612 in CDC, Climate, and SG60 vouchers." |
+-| **2. Cash OCR & Nudge** | **Tan Family** | Click **Scan Receipt** $\rightarrow$ select FairPrice $24.50 receipt. "When Mei Ling pays cash at FairPrice, KeepIt's OCR instantly catches it and triggers an **Opportunity Cost Literacy Nudge**: *'You spent $24.50 cash when you have $85 in CDC vouchers expiring in 12 days!'*" |
+-| **3. Radar & Pacing** | **Tan Family** | Click **Radar** in header $\rightarrow$ "When near Tampines Mall, KeepIt surfaces accepted vouchers and calculates a **$14.15/week spend pace** so vouchers never forfeit silently." |
+-| **4. Two-Way Child View** | **Jia Le (Age 11)** | Switch to **Jia Le**. "Unlike restrictive parental surveillance, Jia Le gets his own dashboard. He can't see parents' bills or private debts; he only sees his **$47.50 balance**, saves for his **$60 New game** goal, and learns positive money habits." Click *Save $2.50* to trigger celebration confetti! |
+-| **5. Gig Resilience** | **Marcus (Lalamove)** | Switch to **Marcus**. "Under the 2025 Platform Workers Act, KeepIt applies a **35% FEDA deduction** and CPF, smooths erratic gig earnings into a **$540/week safe personal salary** with a **$310 buffer**, and tracks his **$180 monthly Workfare (WIS)** payout (10% cash / 90% MediSave) in the same scheme view." |
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/README.md Keep_It-main/keepit-app/README.md
+--- orig/Keep_It-main/keepit-app/README.md	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/README.md	2026-09-03 09:30:49.052840212 +0000
+@@ -1,85 +1,246 @@
+-# KeepIt — Singapore Household Finance & Scheme Tracker
+-> **Ellipsis Tech Series 2026** | Team Technical Difficulties  
+-> **Team Members**: Dhandapani Kumaran (Leader), Senthilkumar Hariharan, Arumugam Sree Sanjana, Tarunikaa Saravanan Vijayadhanalakshmi
++# KeepIt
+ 
+-KeepIt is a single, unified household financial ledger designed for Singapore's unique financial ecosystem. It solves account fragmentation, prevents silent government voucher forfeiture (CDC, Climate, SG60), calculates Platform Workers Act 2025 gig income resilience (FEDA & WIS), provides contextual opportunity cost literacy nudges, and delivers genuine two-way manager/dependent transparency.
++**One household ledger for every dollar you earn, spend, and are owed.**
+ 
+----
++KeepIt consolidates bank accounts, PayNow, cash, gig income, and Singapore
++government voucher schemes (CDC, Climate, SG60) plus Workfare Income Supplement
++into a single view — with role-based access so a manager sees the whole
++household and a dependent sees only their own money.
+ 
+-## 🚀 Quick Start
++Next.js 15 (App Router) · TypeScript · Supabase (Postgres + Auth) · Tailwind CSS
+ 
+-### 1. Prerequisites
+-- **Node.js**: v18.0.0 or later (Tested on Node v24)
+-- **npm**: v9.0.0 or later
++---
+ 
+-### 2. Installation & Run
+-```bash
+-# Navigate to project directory
+-cd C:\Users\dkuma\.gemini\antigravity\scratch\keepit-app
++## Quick start
+ 
+-# Run development server
++```bash
++cd keepit-app
++npm install
++cp .env.example .env.local     # then fill in your Supabase keys (step 2 below)
+ npm run dev
+ ```
+ 
+-Open your browser at **[http://localhost:3000](http://localhost:3000)**.
++Open http://localhost:3000
++
++---
++
++## Setup
++
++### 1. Create the database
++
++1. Create a free project at [supabase.com](https://supabase.com). Choose the
++   **Southeast Asia (Singapore)** region.
++2. Open **SQL Editor → New query**, paste the entire contents of
++   `supabase/schema.sql`, and click **Run**.
++   It is one file covering all three sections (core, gig, ledger) and is safe
++   to re-run.
++3. Go to **Authentication → Sign In / Providers → Email** and turn
++   **Confirm email OFF**. With it on, signup returns no session and the flow
++   dead-ends at the registration screen. Turn it back on for production.
++
++### 2. Add your keys
++
++**Project Settings → API**, then fill `.env.local`:
++
++```
++NEXT_PUBLIC_SUPABASE_URL=https://yourproject.supabase.co
++NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
++SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
++```
++
++Newer Supabase projects label these *publishable* and *secret*; older ones say
++*anon* and *service_role*. Same thing.
++
++Restart the dev server after editing — Next.js only reads env files at startup.
++
++### 3. Run
+ 
+-### 3. Production Build
+ ```bash
+-npm run build
+-npm start
++npm run dev
+ ```
+ 
+ ---
+ 
+-## 🌟 6 Core Features Implemented
++## Using the app
++
++The flow is **register → onboarding → dashboard**, and it is enforced by
++middleware: any unauthenticated request to a protected page redirects to
++`/login`.
++
++1. **`/register`** — create an account. The form collects your name, phone,
++   age, citizenship, and employment type in one pass, then calls
++   `/api/auth/signup` followed by `/api/onboarding`, which creates your
++   household, your manager record, your linked accounts, and any dependents.
++2. **Employment type matters.** Choosing **platform worker** unlocks the gig
++   tab: the FEDA → CPF → spendable breakdown and the Workfare payout tracker.
++   Choosing regular or variable income hides them, because those schemes
++   legally do not apply.
++3. **`/`** — the dashboard. Tabs across the bottom: Home, Ledger, Schemes,
++   Family, Gig (platform workers only), Goals.
++4. **Add a dependent** from the Family tab. Dependents get their own simplified
++   view showing only their balance, savings goal, and activity.
++5. **`/login`** — returning users. Logging out is in the header dropdown.
++
++### What to show in a demo
++
++- **Log a cash purchase** in a grocery category. The nudge fires from live
++  voucher balances, showing what an expiring voucher could have covered.
++- **The gig tab**, if registered as a platform worker: gross → FEDA → CPF →
++  spendable, plus which Workfare months landed and which were missed.
++- **Switch to a dependent's view** from the Family tab to show the
++  transparency contrast.
++
++---
++
++## Verifying the backend is connected
+ 
+-1. **Automatic Household Ledger (Feature 1)**:
+-   - Consolidated view across multi-bank accounts (DBS, OCBC) and PayNow/PayLah activity.
+-   - Intelligent OCR Receipt Scanner with presets for NTUC FairPrice, Sheng Siong, and Kopitiam.
+-   - Single-tap manual transaction fallback.
++```bash
++npm run verify:backend
++```
++
++Or check by hand:
+ 
+-2. **Gig Income & CPF Resilience Engine (Feature 2)**:
+-   - Platform Workers Act 2025 Fixed Expense Deduction Amount (FEDA: 60% car/van, 35% motorcycle, 20% bicycle/walking).
+-   - Rolling safe weekly "Personal Salary" algorithm ($540/week baseline) with surplus buffer savings ($310).
+-   - Monthly Workfare Income Supplement (WIS / PCTS) tracker with 10% Cash / 90% MediSave statutory split and payment calendar.
++```bash
++curl http://localhost:3000/api/health
++```
+ 
+-3. **Government Voucher & Scheme Tracker (Feature 3)**:
+-   - Unified dashboard for CDC Vouchers (Tranche 1 & 2), Climate Vouchers, and SG60 Vouchers.
+-   - Real-time countdowns and expiry urgency alerts.
+-   - Instant SMS claim link integration simulation.
++| Response | Meaning |
++|---|---|
++| `"database": "connected"` | Supabase is live |
++| `"database": "not-configured"` | `.env.local` missing or not loaded |
+ 
+-4. **Contextual Literacy Nudge (Feature 4)**:
+-   - Live transaction evaluator that flags opportunity costs (e.g. paying cash for groceries when CDC vouchers are expiring in 12 days).
++**In the browser**, logged in, open DevTools console:
+ 
+-5. **Two-Way Manager vs. Dependent Dashboards (Feature 5)**:
+-   - **Manager View (Mei Ling / Marcus)**: Full visibility into household balance ($4,285), accounts, schemes, and allowances.
+-   - **Dependent View (Jia Le, Age 11)**: Dedicated child dashboard showing personal balance ($47.50), active savings goal for a "New game" with progress animation, and canteen expenses—without exposing parents' private bank accounts or debt.
++```js
++await (await fetch('/api/household')).json()
++```
+ 
+-6. **Location-Based Voucher Nudges & Spend Pacing (Feature 6)**:
+-   - **Interactive Location Radar**: Simulate being near NTUC FairPrice Tampines Mall, Bedok Hawker Centre, or Courts Megastore to trigger real-time voucher acceptance alerts.
+-   - **Spend Pacing Calculator**: Computes safe weekly burn rates ($\text{Balance} / \text{Weeks Left}$) with color-coded status badges (*On Track*, *Behind Pace*, *Critical*).
++That returns your entire dashboard payload straight from Postgres. If you see
++your real household name and members, the frontend is genuinely reading from
++the backend.
++
++**In Supabase**, open **Table Editor** and check `household_members`,
++`transactions`, `government_vouchers`, and `savings_goals` for your rows. Add a
++transaction in the app, refresh the table, and watch the row appear.
++
++### Common problems
++
++| Symptom | Cause |
++|---|---|
++| Redirected to `/login` in a loop | Email confirmation is still ON in Supabase |
++| `"Supabase is not configured"` | `.env.local` missing, misnamed, or server not restarted |
++| `infinite recursion detected in policy` | Old policies still present — re-run `supabase/schema.sql` in full |
++| Empty dashboard after registering | Onboarding didn't complete; check the browser Network tab for the `/api/onboarding` response |
+ 
+ ---
+ 
+-## 🎭 Interactive Demo Personas
++## API
++
++Every route is a Next.js Route Handler under `src/app/api/`. They read the
++Supabase session from an HTTP-only cookie, so `curl` without a session returns
++401 by design — test from the browser console while logged in.
++
++| Method | Route | Purpose |
++|---|---|---|
++| POST | `/api/auth/signup` | Create account |
++| POST | `/api/auth/login` | Sign in |
++| POST | `/api/auth/logout` | Sign out |
++| GET | `/api/auth/me` | Current user |
++| GET | `/api/health` | Connection check |
++| POST | `/api/onboarding` | Create household, manager, accounts, dependents |
++| GET | `/api/household` | **Main endpoint** — full dashboard state |
++| POST | `/api/ledger` | Add a transaction, categorise, evaluate nudge |
++| POST | `/api/vouchers` | `claim` or `redeem` a voucher |
++| POST | `/api/savings-goals` | `upsert` or `deposit` on a goal |
++| POST | `/api/gig` | FEDA / CPF / WIS calculations |
++| GET | `/api/location-pacing` | Voucher spend pacing |
++| POST | `/api/nudge` | Mark a nudge acted on |
++| POST | `/api/ocr` | Receipt parsing (stubbed) |
++
++---
++
++## How data flows
++
++```
++Browser (src/app/page.tsx)
++  → src/lib/api.ts          typed fetch wrappers
++    → /api/household        route handler
++      → src/lib/backend/household.ts
++        → Supabase client carrying the user's session cookie
++          → Postgres, filtered by Row Level Security
++```
++
++Writes go through `/api/ledger`, `/api/vouchers`, and `/api/savings-goals`,
++each followed by a refresh so the UI always reflects committed database state.
+ 
+-Switch between personas in 1-click using the top persona switcher bar:
+-- 👨‍👩‍👧 **The Tan Family (Manager)**: Mei Ling & Wei Han + Child Jia Le ($612 Vouchers, Multi-bank ledger, PayNow allowance).
+-- 🛵 **Marcus (Platform Gig Worker)**: 24yo Lalamove rider (35% FEDA, Safe salary smoothing, monthly WIS tracker).
+-- 🎒 **Jia Le (Child Dependent, Age 11)**: Child personal balance ($47.50), savings goal ($47.50 of $60), pocket money stream.
+-- 🧑 **Alex (Young Adult)**: First job solo earner.
++## Role-gating is enforced in the database
++
++`supabase/schema.sql` defines RLS policies so a dependent's session cannot read
++household totals or other members' rows. It is not filtered in the UI.
++
++The `security definer` helper functions (`is_household_member`,
++`is_household_manager`, `is_own_member`) exist because a policy on
++`household_members` that itself queries `household_members` causes
++`infinite recursion detected in policy`. Running that check inside a
++`security definer` function bypasses RLS internally and breaks the loop.
++
++## Business logic lives on the server
++
++- `src/lib/calculations/gigCalculator.ts` — FEDA rates (60% car/van/lorry,
++  35% motorcycle/PMD, 20% bicycle/walk/transit), CPF on post-FEDA earnings
++- `src/lib/calculations/wisCalculator.ts` — WIS eligibility, income cap,
++  cash/MediSave split by age band
++- `src/lib/calculations/pacingEngine.ts` — voucher spend pacing
++- `src/lib/calculations/nudgeEngine.ts` — opportunity-cost detection
++- `src/lib/gig/` — payout history and rolling income used by `/api/gig`
++
++On FEDA: it is a statutory assumption about work expenses used to derive the
++earnings CPF is levied on, not money the platform withholds. The calculator
++returns both `cashReceived` (gross − CPF, what lands in the bank) and
++`takeHomeDisposable` (gross − FEDA − CPF, what's left after work expenses).
++The waterfall ends on the latter.
++
++## What's mocked vs. real
++
++**Real:** authentication, the database and all persistence, RLS role-gating,
++every calculation, nudge triggering, voucher balances and expiry.
++
++**Mocked:** bank and PayNow syncing (no licensed aggregator or SGFinDex
++access), OCR receipt parsing (`/api/ocr` returns realistic stub data), and
++merchant location data for the map.
+ 
+ ---
+ 
+-## 🛠️ Architecture & Tech Stack
++## Project structure
++
++```
++keepit-app/
++├── src/
++│   ├── app/
++│   │   ├── page.tsx          # dashboard shell
++│   │   ├── login/  register/ # auth pages
++│   │   └── api/              # all backend route handlers
++│   ├── components/           # UI grouped by feature
++│   ├── lib/
++│   │   ├── api.ts            # typed fetch wrappers
++│   │   ├── backend/          # server-side household queries
++│   │   ├── calculations/     # FEDA, CPF, WIS, pacing, nudge
++│   │   └── supabase/         # browser, server, admin clients
++│   └── middleware.ts         # route protection
++├── supabase/schema.sql       # complete schema + RLS. Run this first.
++└── scripts/verify-backend.mjs
++```
++
++## Scripts
++
++| Command | Does |
++|---|---|
++| `npm run dev` | Dev server on :3000 |
++| `npm run build` | Production build |
++| `npm start` | Serve the production build |
++| `npm run verify:backend` | Check the Supabase connection |
++
++## Deploying
+ 
+-- **Framework**: Next.js 15 (App Router), React 19, TypeScript
+-- **Styling**: Tailwind CSS, Lucide React, Framer Motion, Canvas Confetti
+-- **Storage**: Local persistent state with Supabase-compatible data schema
+-- **APIs**:
+-  - `/api/ledger` — Transaction streams & multi-account sync
+-  - `/api/vouchers` — Scheme tracking & claim link processing
+-  - `/api/gig` — FEDA, CPF, and WIS calculation engine
+-  - `/api/nudge` — Opportunity cost literacy engine
+-  - `/api/ocr` — Singapore merchant receipt parser
+-  - `/api/location-pacing` — Merchant proximity & burn-rate calculations
++Push to GitHub, import to Vercel, add the three environment variables under
++**Settings → Environment Variables**, deploy.
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/app/api/auth/signup/route.js Keep_It-main/keepit-app/src/app/api/auth/signup/route.js
+--- orig/Keep_It-main/keepit-app/src/app/api/auth/signup/route.js	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/app/api/auth/signup/route.js	1970-01-01 00:00:00.000000000 +0000
+@@ -1,115 +0,0 @@
+-import { NextResponse } from "next/server";
+-import { createSupabaseServerClient } from "@/lib/supabase/server";
+-
+-export async function POST(request) {
+-  try {
+-    const body = await request.json();
+-
+-    const email =
+-      typeof body.email === "string"
+-        ? body.email.trim().toLowerCase()
+-        : "";
+-
+-    const password =
+-      typeof body.password === "string"
+-        ? body.password
+-        : "";
+-
+-    if (!email) {
+-      return NextResponse.json(
+-        {
+-          success: false,
+-          error: "Email is required.",
+-        },
+-        { status: 400 },
+-      );
+-    }
+-
+-    if (!password) {
+-      return NextResponse.json(
+-        {
+-          success: false,
+-          error: "Password is required.",
+-        },
+-        { status: 400 },
+-      );
+-    }
+-
+-    if (password.length < 8) {
+-      return NextResponse.json(
+-        {
+-          success: false,
+-          error:
+-            "Password must be at least 8 characters.",
+-        },
+-        { status: 400 },
+-      );
+-    }
+-
+-    const supabase =
+-      await createSupabaseServerClient();
+-
+-    const {
+-      data,
+-      error,
+-    } = await supabase.auth.signUp({
+-      email,
+-      password,
+-    });
+-
+-    if (error) {
+-      console.error(
+-        "Supabase signup error:",
+-        error,
+-      );
+-
+-      return NextResponse.json(
+-        {
+-          success: false,
+-          error: error.message,
+-        },
+-        { status: 400 },
+-      );
+-    }
+-
+-    return NextResponse.json({
+-      success: true,
+-
+-      user: data.user
+-        ? {
+-            id: data.user.id,
+-            email: data.user.email,
+-          }
+-        : null,
+-
+-      /*
+-       * If email confirmation is enabled in Supabase,
+-       * session may be null until the user verifies
+-       * their email.
+-       */
+-      sessionCreated:
+-        Boolean(data.session),
+-
+-      message:
+-        data.session
+-          ? "Account created successfully."
+-          : "Account created. Please verify your email before continuing.",
+-    });
+-  } catch (error) {
+-    console.error(
+-      "Signup route error:",
+-      error,
+-    );
+-
+-    return NextResponse.json(
+-      {
+-        success: false,
+-        error:
+-          error instanceof Error
+-            ? error.message
+-            : "Signup failed.",
+-      },
+-      { status: 500 },
+-    );
+-  }
+-}
+\ No newline at end of file
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/app/api/onboarding/route.js Keep_It-main/keepit-app/src/app/api/onboarding/route.js
+--- orig/Keep_It-main/keepit-app/src/app/api/onboarding/route.js	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/app/api/onboarding/route.js	1970-01-01 00:00:00.000000000 +0000
+@@ -1,524 +0,0 @@
+-import { NextResponse } from "next/server";
+-import { createSupabaseServerClient } from "@/lib/supabase/server";
+-
+-export async function POST(request) {
+-  try {
+-    const body = await request.json();
+-
+-    const supabase =
+-      await createSupabaseServerClient();
+-
+-    /*
+-     * --------------------------------------------------
+-     * 1. Identify the authenticated user
+-     * --------------------------------------------------
+-     */
+-
+-    const {
+-      data: {
+-        user,
+-      },
+-      error: authError,
+-    } = await supabase.auth.getUser();
+-
+-    if (authError || !user) {
+-      return NextResponse.json(
+-        {
+-          error:
+-            "You must be authenticated before creating a household.",
+-        },
+-        { status: 401 },
+-      );
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 2. Read manager information
+-     * --------------------------------------------------
+-     */
+-
+-    const manager =
+-      body.managerProfile;
+-
+-    if (!manager) {
+-      return NextResponse.json(
+-        {
+-          error:
+-            "Manager profile is required.",
+-        },
+-        { status: 400 },
+-      );
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 3. Create profile
+-     * --------------------------------------------------
+-     */
+-
+-    const {
+-      error: profileError,
+-    } = await supabase
+-      .from("profiles")
+-      .insert({
+-        id: user.id,
+-
+-        full_name:
+-          manager.fullName,
+-
+-        phone_number:
+-          manager.phoneNumber,
+-
+-        email:
+-          manager.email ??
+-          user.email ??
+-          null,
+-
+-        age:
+-          manager.age,
+-
+-        citizenship:
+-          manager.citizenship,
+-
+-        employment_type:
+-          manager.employmentType ??
+-          null,
+-
+-        is_platform_worker:
+-          manager.isPlatformWorker ??
+-          false,
+-      });
+-
+-    if (profileError) {
+-      throw new Error(
+-        `Profile creation failed: ${profileError.message}`,
+-      );
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 4. Create household
+-     * --------------------------------------------------
+-     */
+-
+-    const {
+-      data: household,
+-      error: householdError,
+-    } = await supabase
+-      .from("households")
+-      .insert({
+-        name:
+-          body.householdName ??
+-          `${manager.fullName}'s Household`,
+-
+-        created_by:
+-          user.id,
+-      })
+-      .select()
+-      .single();
+-
+-    if (householdError || !household) {
+-      throw new Error(
+-        householdError?.message ??
+-          "Household creation failed.",
+-      );
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 5. Create manager member
+-     * --------------------------------------------------
+-     */
+-
+-    const {
+-      data: managerMember,
+-      error: memberError,
+-    } = await supabase
+-      .from("household_members")
+-      .insert({
+-        household_id:
+-          household.id,
+-
+-        user_id:
+-          user.id,
+-
+-        full_name:
+-          manager.fullName,
+-
+-        role:
+-          "manager",
+-
+-        phone_number:
+-          manager.phoneNumber,
+-
+-        email:
+-          manager.email ??
+-          user.email ??
+-          null,
+-
+-        age:
+-          manager.age,
+-
+-        citizenship:
+-          manager.citizenship,
+-
+-        employment_type:
+-          manager.employmentType ??
+-          null,
+-
+-        is_platform_worker:
+-          manager.isPlatformWorker ??
+-          false,
+-      })
+-      .select()
+-      .single();
+-
+-    if (memberError || !managerMember) {
+-      throw new Error(
+-        memberError?.message ??
+-          "Manager member creation failed.",
+-      );
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 6. Create manager bank accounts
+-     * --------------------------------------------------
+-     */
+-
+-    if (
+-      Array.isArray(body.accounts) &&
+-      body.accounts.length > 0
+-    ) {
+-      const accounts =
+-        body.accounts.map(
+-          (account: any) => ({
+-            household_id:
+-              household.id,
+-
+-            member_id:
+-              managerMember.id,
+-
+-            bank_name:
+-              account.bankName,
+-
+-            account_number:
+-              account.accountNumber,
+-
+-            account_type:
+-              account.accountType ??
+-              "savings",
+-
+-            balance:
+-              Number(account.balance) || 0,
+-
+-            last_synced_at:
+-              new Date().toISOString(),
+-          }),
+-        );
+-
+-      const {
+-        error: accountError,
+-      } = await supabase
+-        .from("bank_accounts")
+-        .insert(accounts);
+-
+-      if (accountError) {
+-        throw new Error(
+-          `Account creation failed: ${accountError.message}`,
+-        );
+-      }
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 7. Create manager savings goal
+-     * --------------------------------------------------
+-     */
+-
+-    if (
+-      body.managerSavingsGoal
+-    ) {
+-      const goal =
+-        body.managerSavingsGoal;
+-
+-      const {
+-        error: goalError,
+-      } = await supabase
+-        .from("savings_goals")
+-        .insert({
+-          household_id:
+-            household.id,
+-
+-          member_id:
+-            managerMember.id,
+-
+-          title:
+-            goal.title,
+-
+-          target_amount:
+-            Number(goal.targetAmount),
+-
+-          current_amount:
+-            Number(
+-              goal.currentAmount ?? 0,
+-            ),
+-
+-          category_name:
+-            goal.categoryName ??
+-            null,
+-
+-          category_icon:
+-            goal.categoryIcon ??
+-            null,
+-
+-          item_url_or_photo:
+-            goal.itemUrlOrPhoto ??
+-            null,
+-
+-          notes:
+-            goal.notes ??
+-            null,
+-
+-          is_completed:
+-            Number(
+-              goal.currentAmount ?? 0,
+-            ) >=
+-            Number(
+-              goal.targetAmount,
+-            ),
+-        });
+-
+-      if (goalError) {
+-        throw new Error(
+-          `Savings goal creation failed: ${goalError.message}`,
+-        );
+-      }
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 8. Create dependants
+-     * --------------------------------------------------
+-     */
+-
+-    if (
+-      Array.isArray(body.dependents)
+-    ) {
+-      for (
+-        const dependent of body.dependents
+-      ) {
+-        const {
+-          data:
+-            dependentMember,
+-          error:
+-            dependentError,
+-        } = await supabase
+-          .from("household_members")
+-          .insert({
+-            household_id:
+-              household.id,
+-
+-            user_id:
+-              null,
+-
+-            full_name:
+-              dependent.name,
+-
+-            role:
+-              "dependent",
+-
+-            phone_number:
+-              dependent.phoneNumber ??
+-              null,
+-
+-            email:
+-              dependent.email ??
+-              null,
+-
+-            age:
+-              dependent.age ??
+-              null,
+-
+-            citizenship:
+-              dependent.citizenship ??
+-              null,
+-
+-            employment_type:
+-              dependent.workerType ??
+-              null,
+-
+-            is_platform_worker:
+-              dependent.isPlatformWorker ??
+-              false,
+-
+-            personal_balance:
+-              Number(
+-                dependent.personalBalance ??
+-                  0,
+-              ),
+-          })
+-          .select()
+-          .single();
+-
+-        if (
+-          dependentError ||
+-          !dependentMember
+-        ) {
+-          throw new Error(
+-            dependentError?.message ??
+-              "Dependent creation failed.",
+-          );
+-        }
+-
+-        /*
+-         * ------------------------------------------------
+-         * Dependent account
+-         * ------------------------------------------------
+-         */
+-
+-        if (
+-          dependent.account
+-        ) {
+-          const {
+-            error:
+-              accountError,
+-          } = await supabase
+-            .from("bank_accounts")
+-            .insert({
+-              household_id:
+-                household.id,
+-
+-              member_id:
+-                dependentMember.id,
+-
+-              bank_name:
+-                dependent.account.bankName,
+-
+-              account_number:
+-                dependent.account.accountNumber,
+-
+-              account_type:
+-                dependent.account.accountType ??
+-                "savings",
+-
+-              balance:
+-                Number(
+-                  dependent.account.balance ??
+-                    0,
+-                ),
+-
+-              last_synced_at:
+-                new Date().toISOString(),
+-            });
+-
+-          if (accountError) {
+-            throw new Error(
+-              `Dependent account creation failed: ${accountError.message}`,
+-            );
+-          }
+-        }
+-
+-        /*
+-         * ------------------------------------------------
+-         * Dependent savings goal
+-         * ------------------------------------------------
+-         */
+-
+-        if (
+-          dependent.savingsGoal
+-        ) {
+-          const goal =
+-            dependent.savingsGoal;
+-
+-          const {
+-            error:
+-              goalError,
+-          } = await supabase
+-            .from("savings_goals")
+-            .insert({
+-              household_id:
+-                household.id,
+-
+-              member_id:
+-                dependentMember.id,
+-
+-              title:
+-                goal.title,
+-
+-              target_amount:
+-                Number(
+-                  goal.targetAmount,
+-                ),
+-
+-              current_amount:
+-                Number(
+-                  goal.currentAmount ??
+-                    0,
+-                ),
+-
+-              category_name:
+-                goal.categoryName ??
+-                null,
+-
+-              category_icon:
+-                goal.categoryIcon ??
+-                null,
+-
+-              notes:
+-                goal.notes ??
+-                null,
+-
+-              is_completed:
+-                Number(
+-                  goal.currentAmount ??
+-                    0,
+-                ) >=
+-                Number(
+-                  goal.targetAmount,
+-                ),
+-            });
+-
+-          if (goalError) {
+-            throw new Error(
+-              `Dependent savings goal creation failed: ${goalError.message}`,
+-            );
+-          }
+-        }
+-      }
+-    }
+-
+-    /*
+-     * --------------------------------------------------
+-     * 9. Return household ID
+-     * --------------------------------------------------
+-     */
+-
+-    return NextResponse.json({
+-      success: true,
+-
+-      householdId:
+-        household.id,
+-
+-      managerMemberId:
+-        managerMember.id,
+-    });
+-  } catch (error) {
+-    console.error(
+-      "Onboarding error:",
+-      error,
+-    );
+-
+-    return NextResponse.json(
+-      {
+-        success: false,
+-
+-        error:
+-          error instanceof Error
+-            ? error.message
+-            : "Registration failed.",
+-      },
+-      { status: 500 },
+-    );
+-  }
+-}
+\ No newline at end of file
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/app/api/savings-goals/route.ts Keep_It-main/keepit-app/src/app/api/savings-goals/route.ts
+--- orig/Keep_It-main/keepit-app/src/app/api/savings-goals/route.ts	1970-01-01 00:00:00.000000000 +0000
++++ Keep_It-main/keepit-app/src/app/api/savings-goals/route.ts	2026-09-03 09:24:59.288120698 +0000
+@@ -0,0 +1,133 @@
++import { NextRequest, NextResponse } from "next/server";
++import { createSupabaseServerClient } from "@/lib/supabase/server";
++import { isSupabaseConfigured } from "@/lib/supabase/config";
++import { getAuthenticatedUser } from "@/lib/backend/household";
++
++export const dynamic = "force-dynamic";
++
++/**
++ * POST /api/savings-goals
++ *   { action: "upsert", memberId, goal }
++ *   { action: "deposit", memberId, goalId, amount }
++ *
++ * RLS decides what the caller may touch: managers can act on any member of
++ * their household, a dependent only on their own row.
++ */
++export async function POST(request: NextRequest) {
++  if (!isSupabaseConfigured()) {
++    return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
++  }
++
++  try {
++    const supabase = await createSupabaseServerClient();
++    const user = await getAuthenticatedUser(supabase);
++    if (!user) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
++
++    const { data: me } = await supabase
++      .from("household_members")
++      .select("id, household_id, role")
++      .eq("user_id", user.id)
++      .maybeSingle();
++
++    if (!me) return NextResponse.json({ error: "Onboarding required." }, { status: 404 });
++
++    const body = await request.json().catch(() => ({}));
++    const action = body.action || "upsert";
++    const memberId: string = body.memberId || me.id;
++
++    const isManager = me.role === "manager" || me.role === "co_manager";
++    if (!isManager && memberId !== me.id) {
++      return NextResponse.json(
++        { error: "You can only change your own savings goal." },
++        { status: 403 },
++      );
++    }
++
++    if (action === "deposit") {
++      const amount = Math.abs(Number(body.amount) || 0);
++      if (!amount) {
++        return NextResponse.json({ error: "Amount is required." }, { status: 400 });
++      }
++
++      const { data: goal } = await supabase
++        .from("savings_goals")
++        .select("id, current_amount, target_amount")
++        .eq("id", body.goalId)
++        .maybeSingle();
++
++      if (!goal) return NextResponse.json({ error: "Goal not found." }, { status: 404 });
++
++      const next = Math.min(Number(goal.target_amount), Number(goal.current_amount) + amount);
++
++      const { data: updated, error } = await supabase
++        .from("savings_goals")
++        .update({
++          current_amount: next,
++          is_completed: next >= Number(goal.target_amount),
++          updated_at: new Date().toISOString(),
++        })
++        .eq("id", goal.id)
++        .select()
++        .single();
++
++      if (error) throw error;
++      return NextResponse.json({ success: true, goal: updated });
++    }
++
++    const incoming = body.goal || {};
++    const title = incoming.title;
++    const target = Number(incoming.targetAmount);
++
++    if (!title || !target) {
++      return NextResponse.json(
++        { error: "Goal title and target amount are required." },
++        { status: 400 },
++      );
++    }
++
++    const { data: existing } = await supabase
++      .from("savings_goals")
++      .select("id, current_amount")
++      .eq("member_id", memberId)
++      .eq("is_completed", false)
++      .maybeSingle();
++
++    if (existing) {
++      const { data: updated, error } = await supabase
++        .from("savings_goals")
++        .update({
++          title,
++          target_amount: target,
++          category_icon: incoming.categoryIcon || "🎯",
++          updated_at: new Date().toISOString(),
++        })
++        .eq("id", existing.id)
++        .select()
++        .single();
++
++      if (error) throw error;
++      return NextResponse.json({ success: true, goal: updated });
++    }
++
++    const { data: created, error } = await supabase
++      .from("savings_goals")
++      .insert({
++        household_id: me.household_id,
++        member_id: memberId,
++        title,
++        target_amount: target,
++        current_amount: Number(incoming.currentAmount || 0),
++        category_icon: incoming.categoryIcon || "🎯",
++      })
++      .select()
++      .single();
++
++    if (error) throw error;
++    return NextResponse.json({ success: true, goal: created });
++  } catch (error) {
++    return NextResponse.json(
++      { error: error instanceof Error ? error.message : "Unable to save goal." },
++      { status: 500 },
++    );
++  }
++}
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/app/page.tsx Keep_It-main/keepit-app/src/app/page.tsx
+--- orig/Keep_It-main/keepit-app/src/app/page.tsx	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/app/page.tsx	2026-09-03 09:26:50.074379681 +0000
+@@ -208,6 +208,7 @@
+             onAddVoucher={handleClaimVoucher}
+             onSelectLocation={handleSelectLocation}
+             onViewDependent={setSelectedDependentId}
++            isOcrOpen={isOcrOpen}
+             setIsOcrOpen={setIsOcrOpen}
+           />
+         )}
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/components/dependent/DependentDashboard.tsx Keep_It-main/keepit-app/src/components/dependent/DependentDashboard.tsx
+--- orig/Keep_It-main/keepit-app/src/components/dependent/DependentDashboard.tsx	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/components/dependent/DependentDashboard.tsx	2026-09-03 09:25:30.975145625 +0000
+@@ -27,7 +27,13 @@
+ interface DependentDashboardProps {
+   state: AppState;
+   onUpdateState: (newState: AppState) => void;
++  /** Which dependent to render. Falls back to the signed-in member. */
++  dependentId?: string | null;
+   selectedDependentId?: string | null;
++  /** Persists the goal to Supabase via /api/savings-goals. */
++  onSaveGoal?: (memberId: string, goal: SavingsGoal) => Promise<void> | void;
++  /** Persists a deposit to Supabase via /api/savings-goals. */
++  onDepositGoal?: (memberId: string, goalId: string, amount: number) => Promise<void> | void;
+   isManagerViewing?: boolean;
+   onReturnToManager?: () => void;
+ }
+@@ -48,10 +54,14 @@
+ > = ({
+   state,
+   onUpdateState,
++  dependentId = null,
+   selectedDependentId = null,
++  onSaveGoal,
++  onDepositGoal,
+   isManagerViewing = false,
+   onReturnToManager,
+ }) => {
++  const activeDependentId = dependentId || selectedDependentId;
+   const [isGoalModalOpen, setIsGoalModalOpen] =
+     useState(false);
+ 
+@@ -67,10 +77,10 @@
+     useState<string | null>(null);
+ 
+   const currentMember = useMemo(() => {
+-    if (selectedDependentId) {
++    if (activeDependentId) {
+       return state.members.find(
+         (member) =>
+-          member.id === selectedDependentId &&
++          member.id === activeDependentId &&
+           member.role === "dependent"
+       );
+     }
+@@ -78,7 +88,7 @@
+     return state.members.find(
+       (member) => member.role === "dependent"
+     );
+-  }, [state.members, selectedDependentId]);
++  }, [state.members, activeDependentId]);
+ 
+   const dependentTransactions =
+     useMemo<Transaction[]>(() => {
+@@ -229,6 +239,11 @@
+     setSuccessMessage(null);
+     setErrorMessage(null);
+ 
++    // Persist to Supabase when the parent supplies a handler.
++    if (onDepositGoal && currentMember && amount <= availableForOtherThings) {
++      void onDepositGoal(currentMember.id, activeGoal.id, amount);
++    }
++
+     if (amount > availableForOtherThings) {
+       setErrorMessage(
+         `You only have S$${availableForOtherThings.toFixed(
+@@ -285,6 +300,11 @@
+   const handleSaveGoal = (
+     newGoal: SavingsGoal
+   ) => {
++    // Persist to Supabase when the parent supplies a handler.
++    if (onSaveGoal && currentMember) {
++      void onSaveGoal(currentMember.id, newGoal);
++    }
++
+     updateCurrentMember({
+       savingsGoal: {
+         ...newGoal,
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/components/layout/DemoGuideModal.tsx Keep_It-main/keepit-app/src/components/layout/DemoGuideModal.tsx
+--- orig/Keep_It-main/keepit-app/src/components/layout/DemoGuideModal.tsx	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/components/layout/DemoGuideModal.tsx	1970-01-01 00:00:00.000000000 +0000
+@@ -1,184 +0,0 @@
+-"use client";
+-
+-import React, { useState } from "react";
+-import { X, CheckCircle2, Play, ChevronRight, Award, Compass } from "lucide-react";
+-
+-interface DemoGuideModalProps {
+-  isOpen: boolean;
+-  onClose: () => void;
+-  onSelectPersona: (personaId: string) => void;
+-}
+-
+-export const DemoGuideModal: React.FC<DemoGuideModalProps> = ({
+-  isOpen,
+-  onClose,
+-  onSelectPersona,
+-}) => {
+-  const [currentStep, setCurrentStep] = useState(0);
+-
+-  if (!isOpen) return null;
+-
+-  const DEMO_STEPS = [
+-    {
+-      title: "Step 1: The Tan Family (Consolidated Ledger & Voucher Fragmentation)",
+-      personaId: "tan_family",
+-      personaName: "Mei Ling (Tan Household Manager)",
+-      speakerScript:
+-        "“Good afternoon judges. Meet Mei Ling from the Tan household. Post-Seedly shutdown, her family had money scattered across DBS, OCBC, PayNow, and government portals. With KeepIt, all accounts flow into one ledger. Notice she holds $612 in vouchers across CDC, Climate, and SG60 schemes with a clear 12-day expiry warning.”",
+-      action: "Click to load Tan Family persona and inspect the high-level dashboard.",
+-      badge: "Features 1 & 3",
+-    },
+-    {
+-      title: "Step 2: Contextual Opportunity Cost Nudge & OCR",
+-      personaId: "tan_family",
+-      personaName: "Mei Ling",
+-      speakerScript:
+-        "“Watch what happens when Mei Ling logs a $24.50 grocery receipt. KeepIt's OCR instantly parses the receipt, logs it, and immediately fires an Opportunity Cost Nudge: 'You spent $24.50 in cash when you have $85 in expiring CDC vouchers!' This teaches financial literacy at the exact moment of decision.”",
+-      action: "Click 'Scan Receipt' or add a grocery transaction to trigger the live alert.",
+-      badge: "Features 1 & 4",
+-    },
+-    {
+-      title: "Step 3: Location-Based Radar & Spend Pacing (Feature 6)",
+-      personaId: "tan_family",
+-      personaName: "Mei Ling",
+-      speakerScript:
+-        "“When Mei Ling is near Tampines Mall, KeepIt's location radar triggers a proximity card: 'FairPrice nearby accepts your CDC vouchers.' Even better, our spend pacing engine calculates she needs to spend $14.15/week to prevent forfeiture before December 31st.”",
+-      action: "Click the 'Radar' button in the header or location card to switch locations.",
+-      badge: "Feature 6",
+-    },
+-    {
+-      title: "Step 4: Two-Way Transparency for Dependent (Jia Le)",
+-      personaId: "jia_le",
+-      personaName: "Jia Le (Age 11 Dependent)",
+-      speakerScript:
+-        "“Unlike restrictive parental-control apps, KeepIt provides genuine two-way transparency. Let's switch to 11-year-old Jia Le's phone. He cannot see his parents' total savings or private bills. Instead, he sees his personal pocket money ($47.50), his $60 goal for a new game, and his canteen expenses, building positive savings habits.”",
+-      action: "Switch to Jia Le persona to see the dedicated child dashboard.",
+-      badge: "Feature 5",
+-    },
+-    {
+-      title: "Step 5: Marcus (Platform Worker CPF, FEDA & Workfare)",
+-      personaId: "marcus_gig",
+-      personaName: "Marcus (Lalamove Gig Worker)",
+-      speakerScript:
+-        "“Finally, meet Marcus, a 24-year-old Lalamove delivery driver. Under the 2025 Platform Workers Act, KeepIt applies a 35% Fixed Expense Deduction (FEDA) and CPF to calculate true take-home pay. It smooths his erratic income into a safe $540/week salary while saving a $310 buffer, and tracks his monthly $180 Workfare (WIS) payout (10% cash / 90% MediSave) in the same scheme view.”",
+-      action: "Switch to Marcus to showcase the Gig Resilience & Workfare Engine.",
+-      badge: "Feature 2",
+-    },
+-  ];
+-
+-  const step = DEMO_STEPS[currentStep];
+-
+-  return (
+-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+-      <div className="bg-[#0f1722] border border-slate-700/80 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+-        {/* Modal Header */}
+-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-[#131c2a]">
+-          <div className="flex items-center space-x-2.5">
+-            <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+-              <Award className="w-5 h-5" />
+-            </div>
+-            <div>
+-              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+-                Hackathon Demo Pitch Guide
+-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-normal">
+-                  Step {currentStep + 1} of {DEMO_STEPS.length}
+-                </span>
+-              </h2>
+-              <p className="text-xs text-slate-400">
+-                Interactive walkthrough for your 3-minute hackathon presentation
+-              </p>
+-            </div>
+-          </div>
+-          <button
+-            onClick={onClose}
+-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+-          >
+-            <X className="w-5 h-5" />
+-          </button>
+-        </div>
+-
+-        {/* Modal Body */}
+-        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+-          <div className="flex items-center justify-between">
+-            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+-              {step.badge}
+-            </span>
+-            <span className="text-xs text-slate-400">
+-              Active Persona: <strong className="text-slate-200">{step.personaName}</strong>
+-            </span>
+-          </div>
+-
+-          <h3 className="text-base font-bold text-white text-emerald-400">
+-            {step.title}
+-          </h3>
+-
+-          <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 text-sm leading-relaxed relative">
+-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+-              <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
+-              Suggested Pitch Script (Read to Judges):
+-            </div>
+-            <p className="italic text-slate-300">{step.speakerScript}</p>
+-          </div>
+-
+-          <div className="p-3.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-200 text-xs flex items-center justify-between">
+-            <div>
+-              <strong className="text-white block mb-0.5">Recommended Demo Action:</strong>
+-              {step.action}
+-            </div>
+-            <button
+-              onClick={() => {
+-                onSelectPersona(step.personaId);
+-              }}
+-              className="ml-3 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow shrink-0 transition"
+-            >
+-              Switch & Apply
+-            </button>
+-          </div>
+-        </div>
+-
+-        {/* Modal Footer / Navigation */}
+-        <div className="p-4 border-t border-slate-800 bg-[#131c2a] flex items-center justify-between">
+-          <button
+-            onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
+-            disabled={currentStep === 0}
+-            className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+-          >
+-            Previous Step
+-          </button>
+-
+-          <div className="flex space-x-1.5">
+-            {DEMO_STEPS.map((_, i) => (
+-              <button
+-                key={i}
+-                onClick={() => setCurrentStep(i)}
+-                className={`w-2 h-2 rounded-full transition-all ${
+-                  i === currentStep ? "w-6 bg-emerald-400" : "bg-slate-700"
+-                }`}
+-              />
+-            ))}
+-          </div>
+-
+-          {currentStep < DEMO_STEPS.length - 1 ? (
+-            <button
+-              onClick={() => {
+-                const next = currentStep + 1;
+-                setCurrentStep(next);
+-                onSelectPersona(DEMO_STEPS[next].personaId);
+-              }}
+-              className="px-4 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 shadow-lg shadow-emerald-600/20 transition"
+-            >
+-              Next Step <ChevronRight className="w-3.5 h-3.5" />
+-            </button>
+-          ) : (
+-            <button
+-              onClick={onClose}
+-              className="px-4 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 shadow transition"
+-            >
+-              Ready to Demo! <CheckCircle2 className="w-3.5 h-3.5" />
+-            </button>
+-          )}
+-        </div>
+-      </div>
+-    </div>
+-  );
+-};
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/components/layout/PersonaSwitcher.tsx Keep_It-main/keepit-app/src/components/layout/PersonaSwitcher.tsx
+--- orig/Keep_It-main/keepit-app/src/components/layout/PersonaSwitcher.tsx	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/components/layout/PersonaSwitcher.tsx	1970-01-01 00:00:00.000000000 +0000
+@@ -1,108 +0,0 @@
+-"use client";
+-
+-import React from "react";
+-import { Users, Bike, UserCheck, Sparkles, Baby } from "lucide-react";
+-
+-interface PersonaSwitcherProps {
+-  currentPersonaId: string;
+-  onSelectPersona: (personaId: string) => void;
+-}
+-
+-export const PERSONAS = [
+-  {
+-    id: "tan_family",
+-    title: "Tan Family (Manager)",
+-    subtitle: "Mei Ling & Wei Han + Child",
+-    role: "manager",
+-    icon: Users,
+-    tag: "Lower-Income Family",
+-    highlight: "Ledger + $612 Vouchers + Allowance",
+-    badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+-  },
+-  {
+-    id: "marcus_gig",
+-    title: "Marcus (Platform Gig)",
+-    subtitle: "Lalamove Rider (Age 24)",
+-    role: "manager",
+-    icon: Bike,
+-    tag: "Gig Worker (FEDA & WIS)",
+-    highlight: "35% FEDA + Safe Salary + WIS Split",
+-    badgeColor: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+-  },
+-  {
+-    id: "jia_le",
+-    title: "Jia Le (Dependent)",
+-    subtitle: "Child Dependent (Age 11)",
+-    role: "dependent",
+-    icon: Baby,
+-    tag: "Two-Way Transparency",
+-    highlight: "$47.50 Balance + Game Savings Goal",
+-    badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+-  },
+-  {
+-    id: "alex_young_adult",
+-    title: "Alex (Young Adult)",
+-    subtitle: "First Job (Age 26)",
+-    role: "manager",
+-    icon: UserCheck,
+-    tag: "Solo Regular Earner",
+-    highlight: "Base Ledger + Voucher Tracker",
+-    badgeColor: "bg-teal-500/20 text-teal-300 border-teal-500/30",
+-  },
+-];
+-
+-export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({
+-  currentPersonaId,
+-  onSelectPersona,
+-}) => {
+-  return (
+-    <div className="w-full bg-[#0c121a] border-b border-slate-800 py-2.5 px-4">
+-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+-        <div className="flex items-center space-x-2">
+-          <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+-          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+-            Interactive Hackathon Personas:
+-          </span>
+-        </div>
+-
+-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+-          {PERSONAS.map((p) => {
+-            const Icon = p.icon;
+-            const isSelected = currentPersonaId === p.id;
+-
+-            return (
+-              <button
+-                key={p.id}
+-                onClick={() => onSelectPersona(p.id)}
+-                className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left transition-all border ${
+-                  isSelected
+-                    ? "bg-slate-800 text-white border-emerald-500/50 shadow-md ring-1 ring-emerald-500/30"
+-                    : "bg-slate-900/60 text-slate-400 border-slate-800 hover:bg-slate-800/60 hover:text-slate-200"
+-                }`}
+-              >
+-                <div
+-                  className={`p-1 rounded-md ${
+-                    isSelected ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"
+-                  }`}
+-                >
+-                  <Icon className="w-3.5 h-3.5" />
+-                </div>
+-                <div className="min-w-0 flex-1">
+-                  <div className="text-xs font-semibold truncate flex items-center justify-between">
+-                    <span>{p.title.split(" ")[0]}</span>
+-                    {isSelected && (
+-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+-                    )}
+-                  </div>
+-                  <div className="text-[10px] text-slate-400 truncate">
+-                    {p.tag}
+-                  </div>
+-                </div>
+-              </button>
+-            );
+-          })}
+-        </div>
+-      </div>
+-    </div>
+-  );
+-};
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/components/manager/ManagerDashboard.tsx Keep_It-main/keepit-app/src/components/manager/ManagerDashboard.tsx
+--- orig/Keep_It-main/keepit-app/src/components/manager/ManagerDashboard.tsx	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/components/manager/ManagerDashboard.tsx	2026-09-03 09:26:21.775662599 +0000
+@@ -24,6 +24,12 @@
+   onUpdateState: (newState: AppState) => void;
+   onSelectLocation: (location: LocationMerchant | null) => void;
+   onViewDependent: (dependentId: string) => void;
++  /** Persists a transaction to Supabase via /api/ledger. */
++  onCreateTransaction?: (tx: Omit<Transaction, "id">) => Promise<void> | void;
++  /** Persists a voucher redemption via /api/vouchers. */
++  onRedeemVoucher?: (voucherId: string, amount: number) => Promise<void> | void;
++  /** Persists a newly claimed voucher via /api/vouchers. */
++  onAddVoucher?: (voucher: GovernmentVoucher) => Promise<void> | void;
+   isOcrOpen: boolean;
+   setIsOcrOpen: (open: boolean) => void;
+ }
+@@ -35,6 +41,9 @@
+   onUpdateState,
+   onSelectLocation,
+   onViewDependent,
++  onCreateTransaction,
++  onRedeemVoucher,
++  onAddVoucher,
+   isOcrOpen,
+   setIsOcrOpen,
+ }) => {
+@@ -54,6 +63,10 @@
+   };
+ 
+   const handleAddTransaction = (tx: Omit<Transaction, "id">) => {
++    if (onCreateTransaction) {
++      void onCreateTransaction(tx);
++      return;
++    }
+     const { state: nextState } = addTransactionToState(state, tx);
+     onUpdateState(nextState);
+   };
+@@ -65,22 +78,34 @@
+       amount: -receipt.totalAmount,
+       category: receipt.category,
+       source: "Cash Receipt",
+-      memberId: state.members[0]?.id || "mem-meiling",
++      memberId: state.members[0]?.id || "",
+       opportunityCostNote: receipt.suggestedVoucherCategory === "CDC_Supermarket"
+         ? "CDC Supermarket vouchers could have covered this cash expense!"
+         : undefined,
+     };
+ 
++    if (onCreateTransaction) {
++      void onCreateTransaction(tx);
++      return;
++    }
+     const { state: nextState } = addTransactionToState(state, tx);
+     onUpdateState(nextState);
+   };
+ 
+   const handleRedeemVoucher = (voucherId: string, amount: number) => {
++    if (onRedeemVoucher) {
++      void onRedeemVoucher(voucherId, amount);
++      return;
++    }
+     const nextState = redeemVoucherInState(state, voucherId, amount);
+     onUpdateState(nextState);
+   };
+ 
+   const handleAddVoucher = (voucher: GovernmentVoucher) => {
++    if (onAddVoucher) {
++      void onAddVoucher(voucher);
++      return;
++    }
+     const nextState = claimNewVoucherInState(state, voucher);
+     onUpdateState(nextState);
+   };
+@@ -88,19 +113,23 @@
+   const handleSendPocketMoney = (dependentId: string, amount: number) => {
+     const tx: Omit<Transaction, "id"> = {
+       date: "Just now",
+-      description: "Pocket money to Jia Le (PayNow)",
++      description: `Pocket money to ${state.members.find((m) => m.id === dependentId)?.name || "dependent"} (PayNow)`,
+       amount: -amount,
+       category: "Pocket Money",
+       source: "PayNow",
+       recipientId: dependentId,
+-      memberId: state.members[0]?.id || "mem-meiling",
++      memberId: state.members[0]?.id || state.members[0]?.id || "",
+     };
+ 
++    if (onCreateTransaction) {
++      void onCreateTransaction(tx);
++      return;
++    }
+     const { state: nextState } = addTransactionToState(state, tx);
+     onUpdateState(nextState);
+   };
+ 
+-  const isMarcusGigPersona = state.currentPersonaId === "marcus_gig" || state.gigProfile !== undefined;
++  const isMarcusGigPersona = state.gigProfile !== undefined;
+ 
+   // Map view tab
+   if (activeTab === "map") {
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/lib/calculations/gigCalculator.ts Keep_It-main/keepit-app/src/lib/calculations/gigCalculator.ts
+--- orig/Keep_It-main/keepit-app/src/lib/calculations/gigCalculator.ts	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/lib/calculations/gigCalculator.ts	2026-09-03 09:29:33.855496232 +0000
+@@ -33,6 +33,7 @@
+   netAfterFeda: number;
+   cpfDeduction: number;
+   takeHomeDisposable: number;
++  cashReceived: number;
+ } {
+   const fedaRate = getFedaPercentage(vehicle);
+   const fedaDeduction = grossIncome * fedaRate;
+@@ -40,7 +41,12 @@
+   
+   // CPF is levied on net earnings after FEDA
+   const cpfDeduction = netAfterFeda * cpfRate;
+-  const takeHomeDisposable = grossIncome - cpfDeduction;
++  // FEDA is a statutory assumption about work expenses used to derive the
++  // earnings CPF is levied on — it is not withheld by the platform. So there
++  // are two correct numbers, and the waterfall must end on trueDisposable or
++  // it renders a final step LARGER than the one above it.
++  const cashReceived = grossIncome - cpfDeduction;
++  const takeHomeDisposable = netAfterFeda - cpfDeduction;
+ 
+   return {
+     grossIncome: Math.round(grossIncome * 100) / 100,
+@@ -48,6 +54,7 @@
+     netAfterFeda: Math.round(netAfterFeda * 100) / 100,
+     cpfDeduction: Math.round(cpfDeduction * 100) / 100,
+     takeHomeDisposable: Math.round(takeHomeDisposable * 100) / 100,
++    cashReceived: Math.round(cashReceived * 100) / 100,
+   };
+ }
+ 
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/lib/supabase/admin.js Keep_It-main/keepit-app/src/lib/supabase/admin.js
+--- orig/Keep_It-main/keepit-app/src/lib/supabase/admin.js	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/src/lib/supabase/admin.js	2026-09-03 09:27:23.106103115 +0000
+@@ -1,38 +1,45 @@
+ import { createClient } from "@supabase/supabase-js";
+ 
+-const supabaseUrl =
+-  process.env.NEXT_PUBLIC_SUPABASE_URL;
++/**
++ * SERVER ONLY. The service-role key bypasses RLS — never import this into a
++ * client component.
++ *
++ * Built lazily behind a Proxy. A top-level `throw` here would run at module
++ * load, which breaks `next build` (page-data collection) and any deploy where
++ * env vars aren't present at build time. Errors now surface at call time,
++ * inside the request, where they can be returned as a clean 503.
++ */
++let cached = null;
+ 
+-const serviceRoleKey =
+-  process.env.SUPABASE_SERVICE_ROLE_KEY;
++function getAdminClient() {
++  if (cached) return cached;
+ 
+-if (!supabaseUrl) {
+-  throw new Error(
+-    "Missing NEXT_PUBLIC_SUPABASE_URL",
+-  );
++  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
++  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
++
++  if (!supabaseUrl) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
++  if (!serviceRoleKey) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
++
++  cached = createClient(supabaseUrl, serviceRoleKey, {
++    auth: { autoRefreshToken: false, persistSession: false },
++  });
++
++  return cached;
+ }
+ 
+-if (!serviceRoleKey) {
+-  throw new Error(
+-    "Missing SUPABASE_SERVICE_ROLE_KEY",
++export function isAdminConfigured() {
++  return Boolean(
++    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
+   );
+ }
+ 
+-/**
+- * SERVER ONLY.
+- *
+- * Never import this file into client components.
+- *
+- * The service-role key bypasses RLS.
+- */
+-export const supabaseAdmin =
+-  createClient(
+-    supabaseUrl,
+-    serviceRoleKey,
+-    {
+-      auth: {
+-        autoRefreshToken: false,
+-        persistSession: false,
+-      },
++export const supabaseAdmin = new Proxy(
++  {},
++  {
++    get(_target, prop) {
++      const client = getAdminClient();
++      const value = client[prop];
++      return typeof value === "function" ? value.bind(client) : value;
+     },
+-  );
+\ No newline at end of file
++  },
++);
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/src/middleware.ts Keep_It-main/keepit-app/src/middleware.ts
+--- orig/Keep_It-main/keepit-app/src/middleware.ts	1970-01-01 00:00:00.000000000 +0000
++++ Keep_It-main/keepit-app/src/middleware.ts	2026-09-03 09:29:03.995571960 +0000
+@@ -0,0 +1,68 @@
++import { createServerClient } from "@supabase/ssr";
++import { NextResponse, type NextRequest } from "next/server";
++
++const PUBLIC_PATHS = ["/login", "/register", "/auth"];
++
++export async function middleware(request: NextRequest) {
++  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
++  const key =
++    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
++    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
++
++  // Without credentials every page would throw. Let the app render its own
++  // "not configured" state instead of crashing in middleware.
++  if (!url || !key || url.includes("YOUR_PROJECT")) {
++    return NextResponse.next();
++  }
++
++  let response = NextResponse.next({ request });
++
++  const supabase = createServerClient(url, key, {
++    cookies: {
++      getAll() {
++        return request.cookies.getAll();
++      },
++      setAll(cookiesToSet) {
++        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
++        response = NextResponse.next({ request });
++        cookiesToSet.forEach(({ name, value, options }) =>
++          response.cookies.set(name, value, options),
++        );
++      },
++    },
++  });
++
++  // Fail closed: if Supabase is unreachable we must not silently drop auth
++  // gating and let an unauthenticated request through to a protected page.
++  let user = null;
++  let authCheckFailed = false;
++  try {
++    const { data } = await supabase.auth.getUser();
++    user = data.user;
++  } catch {
++    authCheckFailed = true;
++  }
++
++  const path = request.nextUrl.pathname;
++  const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
++
++  if ((!user || authCheckFailed) && !isPublic) {
++    const redirect = request.nextUrl.clone();
++    redirect.pathname = "/login";
++    return NextResponse.redirect(redirect);
++  }
++
++  if (user && (path === "/login" || path === "/register")) {
++    const redirect = request.nextUrl.clone();
++    redirect.pathname = "/";
++    return NextResponse.redirect(redirect);
++  }
++
++  return response;
++}
++
++export const config = {
++  matcher: [
++    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
++  ],
++};
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/supabase/gig.sql Keep_It-main/keepit-app/supabase/gig.sql
+--- orig/Keep_It-main/keepit-app/supabase/gig.sql	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/supabase/gig.sql	1970-01-01 00:00:00.000000000 +0000
+@@ -1,186 +0,0 @@
+--- ============================================================
+--- KEEPIT GIG INCOME & CPF RESILIENCE
+--- ============================================================
+-
+-
+--- ============================================================
+--- 1. GIG WORKER PROFILE
+--- ============================================================
+-
+-create table if not exists public.gig_profiles (
+-    id uuid primary key
+-        default gen_random_uuid(),
+-
+-    household_id uuid not null
+-        references public.households(id)
+-        on delete cascade,
+-
+-    member_id uuid not null
+-        references public.household_members(id)
+-        on delete cascade,
+-
+-    vehicle_type text not null
+-        check (
+-            vehicle_type in (
+-                'car_van_lorry',
+-                'motorcycle_pmd',
+-                'bicycle_walking_public'
+-            )
+-        ),
+-
+-    /*
+-     * CPF contribution rate used for the worker's
+-     * take-home calculation.
+-     *
+-     * Stored per worker so that the rate can be updated
+-     * without changing application code.
+-     */
+-    cpf_rate numeric(6,5)
+-        not null default 0.13
+-        check (
+-            cpf_rate >= 0
+-            and cpf_rate <= 1
+-        ),
+-
+-    buffer_balance numeric(12,2)
+-        not null default 0
+-        check (buffer_balance >= 0),
+-
+-    created_at timestamptz
+-        not null default now(),
+-
+-    updated_at timestamptz
+-        not null default now(),
+-
+-    unique(household_id, member_id)
+-);
+-
+-
+--- ============================================================
+--- 2. GIG PAYOUT HISTORY
+--- ============================================================
+-
+-create table if not exists public.gig_payouts (
+-    id uuid primary key
+-        default gen_random_uuid(),
+-
+-    household_id uuid not null
+-        references public.households(id)
+-        on delete cascade,
+-
+-    member_id uuid not null
+-        references public.household_members(id)
+-        on delete cascade,
+-
+-    platform_name text not null,
+-
+-    gross_payout numeric(12,2)
+-        not null
+-        check (gross_payout >= 0),
+-
+-    payout_date date not null,
+-
+-    source text not null default 'manual'
+-        check (
+-            source in (
+-                'bank',
+-                'paynow',
+-                'paylah',
+-                'manual'
+-            )
+-        ),
+-
+-    source_reference text,
+-
+-    created_at timestamptz
+-        not null default now()
+-);
+-
+-
+--- ============================================================
+--- 3. PREVENT DUPLICATE AUTOMATIC PAYOUTS
+--- ============================================================
+-
+-create unique index if not exists
+-gig_payouts_source_reference_unique
+-on public.gig_payouts (
+-    source,
+-    source_reference
+-)
+-where source_reference is not null;
+-
+-
+--- ============================================================
+--- 4. INDEXES
+--- ============================================================
+-
+-create index if not exists
+-gig_payouts_member_date_idx
+-on public.gig_payouts (
+-    member_id,
+-    payout_date desc
+-);
+-
+-create index if not exists
+-gig_payouts_household_date_idx
+-on public.gig_payouts (
+-    household_id,
+-    payout_date desc
+-);
+-
+-
+--- ============================================================
+--- 5. ENABLE RLS
+--- ============================================================
+-
+-alter table public.gig_profiles
+-enable row level security;
+-
+-alter table public.gig_payouts
+-enable row level security;
+-
+-
+--- ============================================================
+--- 6. HOUSEHOLD MEMBERS CAN READ GIG PROFILES
+--- ============================================================
+-
+-drop policy if exists
+-"Household members can view gig profiles"
+-on public.gig_profiles;
+-
+-create policy
+-"Household members can view gig profiles"
+-on public.gig_profiles
+-for select
+-to authenticated
+-using (
+-    exists (
+-        select 1
+-        from public.household_members hm
+-        where hm.household_id = gig_profiles.household_id
+-        and hm.user_id = auth.uid()
+-    )
+-);
+-
+-
+--- ============================================================
+--- 7. HOUSEHOLD MEMBERS CAN READ GIG PAYOUTS
+--- ============================================================
+-
+-drop policy if exists
+-"Household members can view gig payouts"
+-on public.gig_payouts;
+-
+-create policy
+-"Household members can view gig payouts"
+-on public.gig_payouts
+-for select
+-to authenticated
+-using (
+-    exists (
+-        select 1
+-        from public.household_members hm
+-        where hm.household_id = gig_payouts.household_id
+-        and hm.user_id = auth.uid()
+-    )
+-);
+\ No newline at end of file
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/supabase/ledger.sql Keep_It-main/keepit-app/supabase/ledger.sql
+--- orig/Keep_It-main/keepit-app/supabase/ledger.sql	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/supabase/ledger.sql	1970-01-01 00:00:00.000000000 +0000
+@@ -1,319 +0,0 @@
+--- ============================================================
+--- KEEPIT AUTOMATIC HOUSEHOLD LEDGER
+--- ============================================================
+-
+--- ------------------------------------------------------------
+--- 1. Extend existing bank_accounts table
+--- ------------------------------------------------------------
+-
+-alter table public.bank_accounts
+-add column if not exists provider text;
+-
+-alter table public.bank_accounts
+-add column if not exists provider_account_id text;
+-
+-alter table public.bank_accounts
+-add column if not exists sync_status text default 'never_synced';
+-
+-alter table public.bank_accounts
+-add column if not exists sync_error text;
+-
+-alter table public.bank_accounts
+-add column if not exists is_active boolean default true;
+-
+-alter table public.bank_accounts
+-add column if not exists currency text default 'SGD';
+-
+-alter table public.bank_accounts
+-add column if not exists updated_at timestamptz default now();
+-
+-
+--- Allow more account types for the household ledger.
+-
+-alter table public.bank_accounts
+-drop constraint if exists bank_accounts_account_type_check;
+-
+-alter table public.bank_accounts
+-add constraint bank_accounts_account_type_check
+-check (
+-  account_type in (
+-    'savings',
+-    'current',
+-    'wallet',
+-    'card',
+-    'paynow',
+-    'paylah'
+-  )
+-);
+-
+-
+--- ------------------------------------------------------------
+--- 2. Ledger transactions
+--- ------------------------------------------------------------
+-
+-create table if not exists public.ledger_transactions (
+-  id uuid primary key default gen_random_uuid(),
+-
+-  household_id uuid not null
+-    references public.households(id)
+-    on delete cascade,
+-
+-  member_id uuid not null
+-    references public.household_members(id)
+-    on delete cascade,
+-
+-  account_id uuid
+-    references public.bank_accounts(id)
+-    on delete set null,
+-
+-  recipient_member_id uuid
+-    references public.household_members(id)
+-    on delete set null,
+-
+-  transaction_date timestamptz not null default now(),
+-
+-  description text not null,
+-
+-  merchant_name text,
+-
+-  merchant_address text,
+-
+-  google_place_id text,
+-
+-  google_primary_type text,
+-
+-  google_types text[],
+-
+-  amount numeric(12,2) not null
+-    check (amount >= 0),
+-
+-  direction text not null
+-    check (direction in ('income', 'expense')),
+-
+-  category text not null default 'uncategorised',
+-
+-  purpose text,
+-
+-  counterparty_name text,
+-
+-  source text not null
+-    check (
+-      source in (
+-        'bank',
+-        'card',
+-        'paynow',
+-        'paylah',
+-        'ocr',
+-        'manual'
+-      )
+-    ),
+-
+-  source_reference text,
+-
+-  sync_status text not null default 'complete'
+-    check (
+-      sync_status in (
+-        'pending',
+-        'complete',
+-        'failed',
+-        'fallback'
+-      )
+-    ),
+-
+-  fallback_source text,
+-
+-  categorisation_confidence numeric(4,3),
+-
+-  categorisation_method text,
+-
+-  receipt_storage_path text,
+-
+-  raw_data jsonb,
+-
+-  created_at timestamptz not null default now(),
+-
+-  updated_at timestamptz not null default now()
+-);
+-
+-
+--- ------------------------------------------------------------
+--- 3. Prevent duplicate automatically synced transactions
+--- ------------------------------------------------------------
+-
+-create unique index if not exists
+-ledger_transactions_source_reference_unique
+-on public.ledger_transactions (
+-  source,
+-  source_reference
+-)
+-where source_reference is not null;
+-
+-
+--- ------------------------------------------------------------
+--- 4. Ledger synchronisation runs
+--- ------------------------------------------------------------
+-
+-create table if not exists public.ledger_sync_runs (
+-  id uuid primary key default gen_random_uuid(),
+-
+-  household_id uuid not null
+-    references public.households(id)
+-    on delete cascade,
+-
+-  account_id uuid
+-    references public.bank_accounts(id)
+-    on delete cascade,
+-
+-  provider text,
+-
+-  started_at timestamptz not null default now(),
+-
+-  completed_at timestamptz,
+-
+-  status text not null default 'running'
+-    check (
+-      status in (
+-        'running',
+-        'success',
+-        'failed',
+-        'partial'
+-      )
+-    ),
+-
+-  transactions_received integer default 0,
+-
+-  transactions_created integer default 0,
+-
+-  error_message text,
+-
+-  fallback_required boolean default false,
+-
+-  created_at timestamptz not null default now()
+-);
+-
+-
+--- ------------------------------------------------------------
+--- 5. Enable Row Level Security
+--- ------------------------------------------------------------
+-
+-alter table public.ledger_transactions
+-enable row level security;
+-
+-alter table public.ledger_sync_runs
+-enable row level security;
+-
+-
+--- ------------------------------------------------------------
+--- 6. Household members can view their household transactions
+--- ------------------------------------------------------------
+-
+-drop policy if exists
+-"Household members can view ledger transactions"
+-on public.ledger_transactions;
+-
+-create policy
+-"Household members can view ledger transactions"
+-on public.ledger_transactions
+-for select
+-to authenticated
+-using (
+-  exists (
+-    select 1
+-    from public.household_members hm
+-    where hm.household_id = ledger_transactions.household_id
+-      and hm.user_id = auth.uid()
+-  )
+-);
+-
+-
+--- ------------------------------------------------------------
+--- 7. Household members can view sync information
+--- ------------------------------------------------------------
+-
+-drop policy if exists
+-"Household members can view ledger sync runs"
+-on public.ledger_sync_runs;
+-
+-create policy
+-"Household members can view ledger sync runs"
+-on public.ledger_sync_runs
+-for select
+-to authenticated
+-using (
+-  exists (
+-    select 1
+-    from public.household_members hm
+-    where hm.household_id = ledger_sync_runs.household_id
+-      and hm.user_id = auth.uid()
+-  )
+-);
+-
+-
+--- ------------------------------------------------------------
+--- 8. Useful indexes
+--- ------------------------------------------------------------
+-
+-create index if not exists
+-ledger_transactions_household_id_idx
+-on public.ledger_transactions(household_id);
+-
+-create index if not exists
+-ledger_transactions_member_id_idx
+-on public.ledger_transactions(member_id);
+-
+-create index if not exists
+-ledger_transactions_account_id_idx
+-on public.ledger_transactions(account_id);
+-
+-create index if not exists
+-ledger_transactions_date_idx
+-on public.ledger_transactions(transaction_date desc);
+-
+-create index if not exists
+-ledger_transactions_category_idx
+-on public.ledger_transactions(category);
+-
+-create index if not exists
+-ledger_sync_runs_household_id_idx
+-on public.ledger_sync_runs(household_id);
+-
+-create index if not exists
+-ledger_sync_runs_account_id_idx
+-on public.ledger_sync_runs(account_id);
+-
+-
+--- ------------------------------------------------------------
+--- 9. Automatic updated_at
+--- ------------------------------------------------------------
+-
+-create or replace function public.update_ledger_updated_at()
+-returns trigger
+-language plpgsql
+-as $$
+-begin
+-  new.updated_at = now();
+-  return new;
+-end;
+-$$;
+-
+-
+-drop trigger if exists
+-ledger_transactions_updated_at
+-on public.ledger_transactions;
+-
+-create trigger
+-ledger_transactions_updated_at
+-before update on public.ledger_transactions
+-for each row
+-execute function public.update_ledger_updated_at();
+-
+-
+-drop trigger if exists
+-bank_accounts_updated_at
+-on public.bank_accounts;
+-
+-create trigger
+-bank_accounts_updated_at
+-before update on public.bank_accounts
+-for each row
+-execute function public.update_ledger_updated_at();
+\ No newline at end of file
+diff -ruN '--exclude=node_modules' '--exclude=.next' '--exclude=package-lock.json' orig/Keep_It-main/keepit-app/supabase/schema.sql Keep_It-main/keepit-app/supabase/schema.sql
+--- orig/Keep_It-main/keepit-app/supabase/schema.sql	2026-09-03 08:56:55.000000000 +0000
++++ Keep_It-main/keepit-app/supabase/schema.sql	2026-09-03 09:29:33.866042592 +0000
+@@ -1,3 +1,16 @@
++-- ============================================================
++-- KEEPIT — COMPLETE DATABASE SCHEMA
++-- ============================================================
++-- Run this ONE file in Supabase Dashboard > SQL Editor.
++-- Safe to re-run: everything is `if not exists` / `drop ... if exists`.
++--
++-- Sections:
++--   1. Core   — profiles, households, members, accounts, goals,
++--               transactions, vouchers, nudges, invitations, RLS
++--   2. Gig    — gig payouts (FEDA/CPF/WIS)
++--   3. Ledger — sync runs and raw ledger rows
++-- ============================================================
++
+ -- KeepIt Supabase schema
+ -- Safe to run more than once in a fresh or existing KeepIt project.
+ 
+@@ -346,3 +359,515 @@
+   using (public.is_household_manager(household_id)) with check (public.is_household_manager(household_id));
+ 
+ grant select, insert, update, delete on all tables in schema public to authenticated;
++
++
++-- ============ SECTION 2: GIG ============
++
++-- ============================================================
++-- KEEPIT GIG INCOME & CPF RESILIENCE
++-- ============================================================
++
++
++-- ============================================================
++-- 1. GIG WORKER PROFILE
++-- ============================================================
++
++create table if not exists public.gig_profiles (
++    id uuid primary key
++        default gen_random_uuid(),
++
++    household_id uuid not null
++        references public.households(id)
++        on delete cascade,
++
++    member_id uuid not null
++        references public.household_members(id)
++        on delete cascade,
++
++    vehicle_type text not null
++        check (
++            vehicle_type in (
++                'car_van_lorry',
++                'motorcycle_pmd',
++                'bicycle_walking_public'
++            )
++        ),
++
++    /*
++     * CPF contribution rate used for the worker's
++     * take-home calculation.
++     *
++     * Stored per worker so that the rate can be updated
++     * without changing application code.
++     */
++    cpf_rate numeric(6,5)
++        not null default 0.13
++        check (
++            cpf_rate >= 0
++            and cpf_rate <= 1
++        ),
++
++    buffer_balance numeric(12,2)
++        not null default 0
++        check (buffer_balance >= 0),
++
++    created_at timestamptz
++        not null default now(),
++
++    updated_at timestamptz
++        not null default now(),
++
++    unique(household_id, member_id)
++);
++
++
++-- ============================================================
++-- 2. GIG PAYOUT HISTORY
++-- ============================================================
++
++create table if not exists public.gig_payouts (
++    id uuid primary key
++        default gen_random_uuid(),
++
++    household_id uuid not null
++        references public.households(id)
++        on delete cascade,
++
++    member_id uuid not null
++        references public.household_members(id)
++        on delete cascade,
++
++    platform_name text not null,
++
++    gross_payout numeric(12,2)
++        not null
++        check (gross_payout >= 0),
++
++    payout_date date not null,
++
++    source text not null default 'manual'
++        check (
++            source in (
++                'bank',
++                'paynow',
++                'paylah',
++                'manual'
++            )
++        ),
++
++    source_reference text,
++
++    created_at timestamptz
++        not null default now()
++);
++
++
++-- ============================================================
++-- 3. PREVENT DUPLICATE AUTOMATIC PAYOUTS
++-- ============================================================
++
++create unique index if not exists
++gig_payouts_source_reference_unique
++on public.gig_payouts (
++    source,
++    source_reference
++)
++where source_reference is not null;
++
++
++-- ============================================================
++-- 4. INDEXES
++-- ============================================================
++
++create index if not exists
++gig_payouts_member_date_idx
++on public.gig_payouts (
++    member_id,
++    payout_date desc
++);
++
++create index if not exists
++gig_payouts_household_date_idx
++on public.gig_payouts (
++    household_id,
++    payout_date desc
++);
++
++
++-- ============================================================
++-- 5. ENABLE RLS
++-- ============================================================
++
++alter table public.gig_profiles
++enable row level security;
++
++alter table public.gig_payouts
++enable row level security;
++
++
++-- ============================================================
++-- 6. HOUSEHOLD MEMBERS CAN READ GIG PROFILES
++-- ============================================================
++
++drop policy if exists
++"Household members can view gig profiles"
++on public.gig_profiles;
++
++create policy
++"Household members can view gig profiles"
++on public.gig_profiles
++for select
++to authenticated
++using (
++    exists (
++        select 1
++        from public.household_members hm
++        where hm.household_id = gig_profiles.household_id
++        and hm.user_id = auth.uid()
++    )
++);
++
++
++-- ============================================================
++-- 7. HOUSEHOLD MEMBERS CAN READ GIG PAYOUTS
++-- ============================================================
++
++drop policy if exists
++"Household members can view gig payouts"
++on public.gig_payouts;
++
++create policy
++"Household members can view gig payouts"
++on public.gig_payouts
++for select
++to authenticated
++using (
++    exists (
++        select 1
++        from public.household_members hm
++        where hm.household_id = gig_payouts.household_id
++        and hm.user_id = auth.uid()
++    )
++);
++
++-- ============ SECTION 3: LEDGER ============
++
++-- ============================================================
++-- KEEPIT AUTOMATIC HOUSEHOLD LEDGER
++-- ============================================================
++
++-- ------------------------------------------------------------
++-- 1. Extend existing bank_accounts table
++-- ------------------------------------------------------------
++
++alter table public.bank_accounts
++add column if not exists provider text;
++
++alter table public.bank_accounts
++add column if not exists provider_account_id text;
++
++alter table public.bank_accounts
++add column if not exists sync_status text default 'never_synced';
++
++alter table public.bank_accounts
++add column if not exists sync_error text;
++
++alter table public.bank_accounts
++add column if not exists is_active boolean default true;
++
++alter table public.bank_accounts
++add column if not exists currency text default 'SGD';
++
++alter table public.bank_accounts
++add column if not exists updated_at timestamptz default now();
++
++
++-- Allow more account types for the household ledger.
++
++alter table public.bank_accounts
++drop constraint if exists bank_accounts_account_type_check;
++
++alter table public.bank_accounts
++add constraint bank_accounts_account_type_check
++check (
++  account_type in (
++    'savings',
++    'current',
++    'wallet',
++    'card',
++    'paynow',
++    'paylah'
++  )
++);
++
++
++-- ------------------------------------------------------------
++-- 2. Ledger transactions
++-- ------------------------------------------------------------
++
++create table if not exists public.ledger_transactions (
++  id uuid primary key default gen_random_uuid(),
++
++  household_id uuid not null
++    references public.households(id)
++    on delete cascade,
++
++  member_id uuid not null
++    references public.household_members(id)
++    on delete cascade,
++
++  account_id uuid
++    references public.bank_accounts(id)
++    on delete set null,
++
++  recipient_member_id uuid
++    references public.household_members(id)
++    on delete set null,
++
++  transaction_date timestamptz not null default now(),
++
++  description text not null,
++
++  merchant_name text,
++
++  merchant_address text,
++
++  google_place_id text,
++
++  google_primary_type text,
++
++  google_types text[],
++
++  amount numeric(12,2) not null
++    check (amount >= 0),
++
++  direction text not null
++    check (direction in ('income', 'expense')),
++
++  category text not null default 'uncategorised',
++
++  purpose text,
++
++  counterparty_name text,
++
++  source text not null
++    check (
++      source in (
++        'bank',
++        'card',
++        'paynow',
++        'paylah',
++        'ocr',
++        'manual'
++      )
++    ),
++
++  source_reference text,
++
++  sync_status text not null default 'complete'
++    check (
++      sync_status in (
++        'pending',
++        'complete',
++        'failed',
++        'fallback'
++      )
++    ),
++
++  fallback_source text,
++
++  categorisation_confidence numeric(4,3),
++
++  categorisation_method text,
++
++  receipt_storage_path text,
++
++  raw_data jsonb,
++
++  created_at timestamptz not null default now(),
++
++  updated_at timestamptz not null default now()
++);
++
++
++-- ------------------------------------------------------------
++-- 3. Prevent duplicate automatically synced transactions
++-- ------------------------------------------------------------
++
++create unique index if not exists
++ledger_transactions_source_reference_unique
++on public.ledger_transactions (
++  source,
++  source_reference
++)
++where source_reference is not null;
++
++
++-- ------------------------------------------------------------
++-- 4. Ledger synchronisation runs
++-- ------------------------------------------------------------
++
++create table if not exists public.ledger_sync_runs (
++  id uuid primary key default gen_random_uuid(),
++
++  household_id uuid not null
++    references public.households(id)
++    on delete cascade,
++
++  account_id uuid
++    references public.bank_accounts(id)
++    on delete cascade,
++
++  provider text,
++
++  started_at timestamptz not null default now(),
++
++  completed_at timestamptz,
++
++  status text not null default 'running'
++    check (
++      status in (
++        'running',
++        'success',
++        'failed',
++        'partial'
++      )
++    ),
++
++  transactions_received integer default 0,
++
++  transactions_created integer default 0,
++
++  error_message text,
++
++  fallback_required boolean default false,
++
++  created_at timestamptz not null default now()
++);
++
++
++-- ------------------------------------------------------------
++-- 5. Enable Row Level Security
++-- ------------------------------------------------------------
++
++alter table public.ledger_transactions
++enable row level security;
++
++alter table public.ledger_sync_runs
++enable row level security;
++
++
++-- ------------------------------------------------------------
++-- 6. Household members can view their household transactions
++-- ------------------------------------------------------------
++
++drop policy if exists
++"Household members can view ledger transactions"
++on public.ledger_transactions;
++
++create policy
++"Household members can view ledger transactions"
++on public.ledger_transactions
++for select
++to authenticated
++using (
++  exists (
++    select 1
++    from public.household_members hm
++    where hm.household_id = ledger_transactions.household_id
++      and hm.user_id = auth.uid()
++  )
++);
++
++
++-- ------------------------------------------------------------
++-- 7. Household members can view sync information
++-- ------------------------------------------------------------
++
++drop policy if exists
++"Household members can view ledger sync runs"
++on public.ledger_sync_runs;
++
++create policy
++"Household members can view ledger sync runs"
++on public.ledger_sync_runs
++for select
++to authenticated
++using (
++  exists (
++    select 1
++    from public.household_members hm
++    where hm.household_id = ledger_sync_runs.household_id
++      and hm.user_id = auth.uid()
++  )
++);
++
++
++-- ------------------------------------------------------------
++-- 8. Useful indexes
++-- ------------------------------------------------------------
++
++create index if not exists
++ledger_transactions_household_id_idx
++on public.ledger_transactions(household_id);
++
++create index if not exists
++ledger_transactions_member_id_idx
++on public.ledger_transactions(member_id);
++
++create index if not exists
++ledger_transactions_account_id_idx
++on public.ledger_transactions(account_id);
++
++create index if not exists
++ledger_transactions_date_idx
++on public.ledger_transactions(transaction_date desc);
++
++create index if not exists
++ledger_transactions_category_idx
++on public.ledger_transactions(category);
++
++create index if not exists
++ledger_sync_runs_household_id_idx
++on public.ledger_sync_runs(household_id);
++
++create index if not exists
++ledger_sync_runs_account_id_idx
++on public.ledger_sync_runs(account_id);
++
++
++-- ------------------------------------------------------------
++-- 9. Automatic updated_at
++-- ------------------------------------------------------------
++
++create or replace function public.update_ledger_updated_at()
++returns trigger
++language plpgsql
++as $$
++begin
++  new.updated_at = now();
++  return new;
++end;
++$$;
++
++
++drop trigger if exists
++ledger_transactions_updated_at
++on public.ledger_transactions;
++
++create trigger
++ledger_transactions_updated_at
++before update on public.ledger_transactions
++for each row
++execute function public.update_ledger_updated_at();
++
++
++drop trigger if exists
++bank_accounts_updated_at
++on public.bank_accounts;
++
++create trigger
++bank_accounts_updated_at
++before update on public.bank_accounts
++for each row
++execute function public.update_ledger_updated_at();
+\ No newline at end of file

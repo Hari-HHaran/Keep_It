@@ -33,6 +33,7 @@ export function calculateNetGigIncome(
   netAfterFeda: number;
   cpfDeduction: number;
   takeHomeDisposable: number;
+  cashReceived: number;
 } {
   const fedaRate = getFedaPercentage(vehicle);
   const fedaDeduction = grossIncome * fedaRate;
@@ -40,7 +41,12 @@ export function calculateNetGigIncome(
   
   // CPF is levied on net earnings after FEDA
   const cpfDeduction = netAfterFeda * cpfRate;
-  const takeHomeDisposable = grossIncome - cpfDeduction;
+  // FEDA is a statutory assumption about work expenses used to derive the
+  // earnings CPF is levied on — it is not withheld by the platform. So there
+  // are two correct numbers, and the waterfall must end on trueDisposable or
+  // it renders a final step LARGER than the one above it.
+  const cashReceived = grossIncome - cpfDeduction;
+  const takeHomeDisposable = netAfterFeda - cpfDeduction;
 
   return {
     grossIncome: Math.round(grossIncome * 100) / 100,
@@ -48,6 +54,7 @@ export function calculateNetGigIncome(
     netAfterFeda: Math.round(netAfterFeda * 100) / 100,
     cpfDeduction: Math.round(cpfDeduction * 100) / 100,
     takeHomeDisposable: Math.round(takeHomeDisposable * 100) / 100,
+    cashReceived: Math.round(cashReceived * 100) / 100,
   };
 }
 

@@ -27,7 +27,13 @@ import {
 interface DependentDashboardProps {
   state: AppState;
   onUpdateState: (newState: AppState) => void;
+  /** Which dependent to render. Falls back to the signed-in member. */
+  dependentId?: string | null;
   selectedDependentId?: string | null;
+  /** Persists the goal to Supabase via /api/savings-goals. */
+  onSaveGoal?: (memberId: string, goal: SavingsGoal) => Promise<void> | void;
+  /** Persists a deposit to Supabase via /api/savings-goals. */
+  onDepositGoal?: (memberId: string, goalId: string, amount: number) => Promise<void> | void;
   isManagerViewing?: boolean;
   onReturnToManager?: () => void;
 }
@@ -48,10 +54,14 @@ export const DependentDashboard: React.FC<
 > = ({
   state,
   onUpdateState,
+  dependentId = null,
   selectedDependentId = null,
+  onSaveGoal,
+  onDepositGoal,
   isManagerViewing = false,
   onReturnToManager,
 }) => {
+  const activeDependentId = dependentId || selectedDependentId;
   const [isGoalModalOpen, setIsGoalModalOpen] =
     useState(false);
 
@@ -67,10 +77,10 @@ export const DependentDashboard: React.FC<
     useState<string | null>(null);
 
   const currentMember = useMemo(() => {
-    if (selectedDependentId) {
+    if (activeDependentId) {
       return state.members.find(
         (member) =>
-          member.id === selectedDependentId &&
+          member.id === activeDependentId &&
           member.role === "dependent"
       );
     }
@@ -78,7 +88,7 @@ export const DependentDashboard: React.FC<
     return state.members.find(
       (member) => member.role === "dependent"
     );
-  }, [state.members, selectedDependentId]);
+  }, [state.members, activeDependentId]);
 
   const dependentTransactions =
     useMemo<Transaction[]>(() => {
@@ -229,6 +239,11 @@ export const DependentDashboard: React.FC<
     setSuccessMessage(null);
     setErrorMessage(null);
 
+    // Persist to Supabase when the parent supplies a handler.
+    if (onDepositGoal && currentMember && amount <= availableForOtherThings) {
+      void onDepositGoal(currentMember.id, activeGoal.id, amount);
+    }
+
     if (amount > availableForOtherThings) {
       setErrorMessage(
         `You only have S$${availableForOtherThings.toFixed(
@@ -285,6 +300,11 @@ export const DependentDashboard: React.FC<
   const handleSaveGoal = (
     newGoal: SavingsGoal
   ) => {
+    // Persist to Supabase when the parent supplies a handler.
+    if (onSaveGoal && currentMember) {
+      void onSaveGoal(currentMember.id, newGoal);
+    }
+
     updateCurrentMember({
       savingsGoal: {
         ...newGoal,

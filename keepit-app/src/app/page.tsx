@@ -208,6 +208,7 @@ export default function Home() {
             onAddVoucher={handleClaimVoucher}
             onSelectLocation={handleSelectLocation}
             onViewDependent={setSelectedDependentId}
+            isOcrOpen={isOcrOpen}
             setIsOcrOpen={setIsOcrOpen}
           />
         )}
