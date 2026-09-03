@@ -1,158 +1,300 @@
 "use client";
 
 import React, { useState } from "react";
-import { AppState, HouseholdMember } from "@/lib/types";
-import { Plus, Send, Check, ChevronRight, Eye } from "lucide-react";
+import { AppState } from "@/lib/types";
+import {
+  Check,
+  ChevronRight,
+  Eye,
+  Send,
+} from "lucide-react";
 
 interface HouseholdMembersListProps {
   state: AppState;
-  onSendPocketMoney: (dependentId: string, amount: number) => void;
-  onViewDependent?: (dependentId: string) => void;
+  onSendPocketMoney: (
+    dependentId: string,
+    amount: number
+  ) => void;
+  onViewDependent?: (
+    dependentId: string
+  ) => void;
 }
 
-export const HouseholdMembersList: React.FC<HouseholdMembersListProps> = ({
+export const HouseholdMembersList: React.FC<
+  HouseholdMembersListProps
+> = ({
   state,
   onSendPocketMoney,
   onViewDependent,
 }) => {
-  const [sentAllowanceMemberId, setSentAllowanceMemberId] = useState<string | null>(null);
+  const [
+    sentAllowanceMemberId,
+    setSentAllowanceMemberId,
+  ] = useState<string | null>(null);
 
-  const handleQuickAllowance = (e: React.MouseEvent, memberId: string) => {
-    e.stopPropagation();
-    onSendPocketMoney(memberId, 10.00);
+  const managers = state.members.filter(
+    (member) =>
+      member.role === "manager" ||
+      member.role === "co_manager"
+  );
+
+  const dependents = state.members.filter(
+    (member) => member.role === "dependent"
+  );
+
+  const allowanceRecipient = dependents.find(
+    (dependent) =>
+      dependent.id === sentAllowanceMemberId
+  );
+
+  const handleQuickAllowance = (
+    event: React.MouseEvent,
+    memberId: string
+  ) => {
+    event.stopPropagation();
+
+    onSendPocketMoney(memberId, 10);
+
     setSentAllowanceMemberId(memberId);
-    setTimeout(() => {
-      setSentAllowanceMemberId(null);
-    }, 2000);
-  };
 
-  const dependents = state.members.filter((m) => m.role === "dependent");
-  const managers = state.members.filter((m) => m.role === "manager" || m.role === "co_manager");
+    window.setTimeout(() => {
+      setSentAllowanceMemberId(null);
+    }, 2500);
+  };
 
   return (
     <div className="space-y-3 font-sans animate-fadeIn">
-      {/* Header */}
+      {/* Success message */}
+      {allowanceRecipient && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="animate-pop flex items-center gap-3 rounded-2xl border border-[#0F4635]/20 bg-[#DDE8E1] p-3 text-[#0F4635] shadow-sm"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0F4635] text-[#FBF6EC]">
+            <Check className="h-4 w-4" />
+          </div>
+
+          <div>
+            <div className="text-xs font-bold">
+              Allowance sent successfully
+            </div>
+
+            <div className="text-[11px] text-[#2C5A49]">
+              S$10.00 was added to{" "}
+              {allowanceRecipient.name}&apos;s
+              personal balance.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Heading */}
       <div className="flex items-center justify-between px-1">
         <div>
-          <h2 className="font-display font-bold text-base text-[#1B1815]">
-            Who's in it
+          <h2 className="font-display text-base font-bold text-[#1B1815]">
+            Who&apos;s in it
           </h2>
+
           <p className="text-xs text-[#8A8075]">
-            {managers.length} managers • {dependents.length} dependent{dependents.length > 1 ? "s" : ""}
+            {managers.length} manager
+            {managers.length !== 1 ? "s" : ""} •{" "}
+            {dependents.length} dependent
+            {dependents.length !== 1 ? "s" : ""}
           </p>
         </div>
       </div>
 
-      {/* Managers Section */}
+      {/* Managers */}
       <div className="space-y-2">
-        <div className="text-[10.5px] font-mono-custom uppercase tracking-wider text-[#8A8075] font-semibold px-1">
+        <div className="font-mono-custom px-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#8A8075]">
           Managers • Equal Access
         </div>
 
-        {managers.map((m) => (
+        {managers.map((manager) => (
           <div
-            key={m.id}
-            className="bg-[#FFFDF8] border border-[#EDE4D6] rounded-[18px] p-3.5 shadow-sm space-y-2"
+            key={manager.id}
+            className="space-y-2 rounded-[18px] border border-[#EDE4D6] bg-[#FFFDF8] p-3.5 shadow-sm"
           >
             <div className="flex items-center gap-3">
               <span
-                className={`w-9 h-9 rounded-full flex items-center justify-center font-display font-bold text-sm shrink-0 ${
-                  m.role === "manager"
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold ${
+                  manager.role === "manager"
                     ? "bg-[#0F4635] text-[#FBF6EC]"
                     : "bg-[#E8A02C] text-[#1B1815]"
                 }`}
               >
-                {m.avatarText || m.name.slice(0, 1)}
+                {manager.avatarText ||
+                  manager.name.slice(0, 1)}
               </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-display font-bold text-sm text-[#1B1815]">
-                  {m.name} {m.role === "manager" && <span className="text-xs font-normal text-[#8A8075]">· you</span>}
+
+              <div className="min-w-0 flex-1">
+                <div className="font-display text-sm font-bold text-[#1B1815]">
+                  {manager.name}
+
+                  {manager.role === "manager" && (
+                    <span className="text-xs font-normal text-[#8A8075]">
+                      {" "}
+                      · you
+                    </span>
+                  )}
                 </div>
+
                 <div className="text-[11px] text-[#8A8075]">
-                  Singpass verified • {m.workerType === "platform_worker" ? "Platform worker" : "Salaried"}
+                  Singpass verified •{" "}
+                  {manager.workerType ===
+                  "platform_worker"
+                    ? "Platform worker"
+                    : "Salaried"}
                 </div>
               </div>
-              <span className="bg-[#DDE8E1] text-[#0F4635] font-semibold text-[10.5px] px-2.5 py-1 rounded-full shrink-0">
+
+              <span className="shrink-0 rounded-full bg-[#DDE8E1] px-2.5 py-1 text-[10.5px] font-semibold text-[#0F4635]">
                 Full access
               </span>
             </div>
 
-            {m.workerType === "platform_worker" && (
-              <div className="flex gap-1.5 pt-2 border-t border-[#F1E7D8] flex-wrap text-[10px] font-mono-custom">
-                <span className="bg-[#F5EAD6] text-[#9A7420] px-2 py-0.5 rounded-md font-semibold">CPF</span>
-                <span className="bg-[#F5EAD6] text-[#9A7420] px-2 py-0.5 rounded-md font-semibold">WORKFARE</span>
-                <span className="bg-[#F5EAD6] text-[#9A7420] px-2 py-0.5 rounded-md font-semibold">PCTS</span>
+            {manager.workerType ===
+              "platform_worker" && (
+              <div className="font-mono-custom flex flex-wrap gap-1.5 border-t border-[#F1E7D8] pt-2 text-[10px]">
+                <span className="rounded-md bg-[#F5EAD6] px-2 py-0.5 font-semibold text-[#9A7420]">
+                  CPF
+                </span>
+
+                <span className="rounded-md bg-[#F5EAD6] px-2 py-0.5 font-semibold text-[#9A7420]">
+                  WORKFARE
+                </span>
+
+                <span className="rounded-md bg-[#F5EAD6] px-2 py-0.5 font-semibold text-[#9A7420]">
+                  PCTS
+                </span>
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Dependents Section (Clickable to open Dependent Dashboard!) */}
+      {/* Dependents */}
       <div className="space-y-2 pt-1">
-        <div className="text-[10.5px] font-mono-custom uppercase tracking-wider text-[#8A8075] font-semibold px-1 flex items-center justify-between">
-          <span>Dependents • Tap to view dashboard</span>
-          <span className="text-[#0F4635] font-bold">Tap profile ›</span>
+        <div className="font-mono-custom flex items-center justify-between px-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#8A8075]">
+          <span>Dependents • Tap to view</span>
+
+          <span className="font-bold text-[#0F4635]">
+            Tap profile ›
+          </span>
         </div>
 
-        {dependents.map((dep) => (
-          <div
-            key={dep.id}
-            onClick={() => {
-              if (onViewDependent) onViewDependent(dep.id);
-            }}
-            className="bg-[#FFFDF8] hover:bg-[#F9F4EB] border border-[#EDE4D6] hover:border-[#0F4635] rounded-[18px] p-3.5 shadow-sm space-y-2.5 cursor-pointer active:scale-[0.99] transition group"
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-full bg-[#D7442A] text-[#FBF6EC] font-display font-bold text-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                {dep.avatarText || dep.name.slice(0, 1)}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-display font-bold text-sm text-[#1B1815] group-hover:text-[#0F4635] transition flex items-center gap-1.5">
-                  <span>{dep.name}</span>
-                  <span className="text-xs font-normal text-[#8A8075]">· age {dep.age || 11}</span>
-                </div>
-                <div className="text-[11px] text-[#8A8075]">
-                  {dep.savingsGoal ? `Saving for a ${dep.savingsGoal.title}` : "Pocket money ledger"} • Balance: S${dep.personalBalance?.toFixed(2) || "47.50"}
-                </div>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="bg-[#F1E7D8] text-[#6B6259] font-semibold text-[10.5px] px-2.5 py-1 rounded-full shrink-0">
-                  Own money only
-                </span>
-                <ChevronRight className="w-4 h-4 text-[#8A8075] group-hover:text-[#0F4635] group-hover:translate-x-0.5 transition" />
-              </div>
-            </div>
+        {dependents.length === 0 ? (
+          <div className="rounded-2xl border border-[#EDE4D6] bg-[#FFFDF8] p-5 text-center">
+            <p className="text-xs font-bold text-[#1B1815]">
+              No dependents added
+            </p>
 
-            <div className="text-xs text-[#6B6259] leading-relaxed pt-1">
-              {dep.name} cannot see the household total or private debt. {dep.name} <strong className="text-[#1B1815]">can</strong> see personal pocket money and active savings goals.
-            </div>
-
-            <div className="pt-2 border-t border-[#F1E7D8] flex items-center gap-2">
+            <p className="mt-1 text-[11px] text-[#8A8075]">
+              Dependents will appear here after they
+              are added to the household.
+            </p>
+          </div>
+        ) : (
+          dependents.map((dependent) => (
+            <div
+              key={dependent.id}
+              className="group space-y-2.5 rounded-[18px] border border-[#EDE4D6] bg-[#FFFDF8] p-3.5 shadow-sm transition hover:border-[#0F4635] hover:bg-[#F9F4EB]"
+            >
               <button
-                onClick={(e) => handleQuickAllowance(e, dep.id)}
-                className="py-1.5 px-3 rounded-xl bg-[#0F4635] hover:bg-[#0A3227] text-[#FBF6EC] text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs"
+                type="button"
+                onClick={() =>
+                  onViewDependent?.(dependent.id)
+                }
+                className="flex w-full items-center gap-3 text-left"
               >
-                {sentAllowanceMemberId === dep.id ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Sent S$10!</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Send S$10 PayNow</span>
-                  </>
-                )}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D7442A] font-display text-sm font-bold text-[#FBF6EC] transition-transform group-hover:scale-105">
+                  {dependent.avatarText ||
+                    dependent.name.slice(0, 1)}
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 font-display text-sm font-bold text-[#1B1815] transition group-hover:text-[#0F4635]">
+                    <span>{dependent.name}</span>
+
+                    <span className="text-xs font-normal text-[#8A8075]">
+                      · age {dependent.age || "—"}
+                    </span>
+                  </div>
+
+                  <div className="truncate text-[11px] text-[#8A8075]">
+                    {dependent.savingsGoal
+                      ? `Saving for ${dependent.savingsGoal.title}`
+                      : "No savings goal"}{" "}
+                    • Balance: S$
+                    {(
+                      dependent.personalBalance || 0
+                    ).toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <span className="shrink-0 rounded-full bg-[#F1E7D8] px-2.5 py-1 text-[10.5px] font-semibold text-[#6B6259]">
+                    Own money only
+                  </span>
+
+                  <ChevronRight className="h-4 w-4 text-[#8A8075]" />
+                </div>
               </button>
 
-              <div className="flex-1 text-right text-[11px] text-[#0F4635] font-semibold group-hover:underline flex items-center justify-end gap-1">
-                <Eye className="w-3.5 h-3.5" />
-                <span>View {dep.name}'s Screen ›</span>
+              <div className="text-xs leading-relaxed text-[#6B6259]">
+                {dependent.name} cannot see the
+                household total or private accounts.{" "}
+                {dependent.name} can see their own
+                pocket money, spending and savings
+                goals.
+              </div>
+
+              <div className="flex items-center gap-2 border-t border-[#F1E7D8] pt-2">
+                <button
+                  type="button"
+                  onClick={(event) =>
+                    handleQuickAllowance(
+                      event,
+                      dependent.id
+                    )
+                  }
+                  disabled={
+                    sentAllowanceMemberId ===
+                    dependent.id
+                  }
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0F4635] px-3 py-1.5 text-xs font-semibold text-[#FBF6EC] shadow-xs transition hover:bg-[#0A3227] disabled:opacity-70"
+                >
+                  {sentAllowanceMemberId ===
+                  dependent.id ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      Sent S$10!
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      Send S$10
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    onViewDependent?.(dependent.id)
+                  }
+                  className="flex flex-1 items-center justify-end gap-1 text-right text-[11px] font-semibold text-[#0F4635] hover:underline"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+
+                  View {dependent.name}&apos;s screen
+                  ›
+                </button>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
