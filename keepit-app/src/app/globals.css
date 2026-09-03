@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-bricolage: 'Bricolage Grotesque', sans-serif;
+  --font-instrument: 'Instrument Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  
+  --bg-sand: #EDE4D6;
+  --bg-cream: #FBF6EC;
+  --bg-card: #FFFDF8;
+  --color-green: #0F4635;
+  --color-amber: #E8A02C;
+  --color-coral: #D7442A;
+  --color-dark: #1B1815;
+}
+
+body {
+  font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #EDE4D6;
+  color: #1B1815;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
+
+.font-mono-custom {
+  font-family: 'DM Mono', monospace;
+}
+
+/* Animations from KeepIt design system */
+@keyframes kwave {
+  0%, 100% { transform: translateX(-8px) rotate(-1deg); }
+  50% { transform: translateX(8px) rotate(1deg); }
+}
+
+@keyframes kdrip {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(22px); opacity: 0; }
+}
+
+@keyframes kfloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes kpop {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes krise {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-wave {
+  animation: kwave 4.5s ease-in-out infinite;
+}
+
+.animate-drip {
+  animation: kdrip 2.2s ease-in infinite;
+}
+
+.animate-float {
+  animation: kfloat 3s ease-in-out infinite;
+}
+
+.animate-pop {
+  animation: kpop 0.4s ease both;
+}
+
+.animate-rise {
+  animation: krise 0.4s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D6C9B4;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8A892;
+}
