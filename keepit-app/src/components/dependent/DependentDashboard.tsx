@@ -1,164 +1,394 @@
 "use client";
 
-import React, { useState } from "react";
-import { AppState, SavingsGoal } from "@/lib/types";
-import { SetSavingsGoalModal } from "./SetSavingsGoalModal";
-import { 
-  ArrowLeft, 
-  ShieldCheck, 
-  Eye, 
-  Plus, 
-  Sparkles, 
-  Trophy, 
-  ShoppingBag, 
-  Check, 
-  Edit3, 
-  Gift, 
-  Target,
-  ArrowRight
-} from "lucide-react";
+import React, { useMemo, useState } from "react";
 import confetti from "canvas-confetti";
+
+import {
+  AppState,
+  HouseholdMember,
+  SavingsGoal,
+  Transaction,
+} from "@/lib/types";
+
+import { SetSavingsGoalModal } from "./SetSavingsGoalModal";
+import { DependentActivityFeed } from "./DependentActivityFeed";
+
+import {
+  Check,
+  Edit3,
+  Eye,
+  Gift,
+  ShoppingBag,
+  Target,
+  Trophy,
+  Wallet,
+} from "lucide-react";
 
 interface DependentDashboardProps {
   state: AppState;
   onUpdateState: (newState: AppState) => void;
+  selectedDependentId?: string | null;
   isManagerViewing?: boolean;
   onReturnToManager?: () => void;
 }
 
-export const DependentDashboard: React.FC<DependentDashboardProps> = ({
+const DEFAULT_GOAL: SavingsGoal = {
+  id: "goal-default",
+  title: "New Savings Goal",
+  targetAmount: 50,
+  currentAmount: 0,
+  categoryIcon: "🎯",
+  categoryName: "General",
+  notes: "Start saving towards something important",
+  isCompleted: false,
+};
+
+export const DependentDashboard: React.FC<
+  DependentDashboardProps
+> = ({
   state,
   onUpdateState,
+  selectedDependentId = null,
   isManagerViewing = false,
   onReturnToManager,
 }) => {
-  const currentMember = state.members.find((m) => m.role === "dependent") || state.members[0];
+  const [isGoalModalOpen, setIsGoalModalOpen] =
+    useState(false);
 
-  // Active Goal State
-  const [activeGoal, setActiveGoal] = useState<SavingsGoal>(
-    currentMember?.savingsGoal || {
-      id: "goal-1",
-      title: "Wilson NCAA Basketball",
-      targetAmount: 60.00,
-      currentAmount: 47.50,
-      categoryIcon: "🏀",
-      categoryName: "Sports",
-      notes: "For weekend games at Bedok South CC",
-      isCompleted: false,
+  const [
+    isCelebratingPurchase,
+    setIsCelebratingPurchase,
+  ] = useState(false);
+
+  const [successMessage, setSuccessMessage] =
+    useState<string | null>(null);
+
+  const [errorMessage, setErrorMessage] =
+    useState<string | null>(null);
+
+  const currentMember = useMemo(() => {
+    if (selectedDependentId) {
+      return state.members.find(
+        (member) =>
+          member.id === selectedDependentId &&
+          member.role === "dependent"
+      );
     }
+
+    return state.members.find(
+      (member) => member.role === "dependent"
+    );
+  }, [state.members, selectedDependentId]);
+
+  const dependentTransactions =
+    useMemo<Transaction[]>(() => {
+      if (!currentMember) {
+        return [];
+      }
+
+      return state.transactions
+        .filter(
+          (transaction) =>
+            transaction.memberId ===
+              currentMember.id ||
+            transaction.recipientId ===
+              currentMember.id
+        )
+        .map((transaction) => {
+          if (
+            transaction.recipientId ===
+              currentMember.id &&
+            transaction.category === "Pocket Money"
+          ) {
+            return {
+              ...transaction,
+              amount: Math.abs(transaction.amount),
+            };
+          }
+
+          return transaction;
+        });
+    }, [state.transactions, currentMember]);
+
+  if (!currentMember) {
+    return (
+      <div className="flex min-h-full items-center justify-center bg-[#FDF6E9] p-6">
+        <div className="rounded-2xl border border-[#E0D4BF] bg-[#FFFDF8] p-6 text-center">
+          <h2 className="font-display text-lg font-bold text-[#1B1815]">
+            Dependent not found
+          </h2>
+
+          {onReturnToManager && (
+            <button
+              type="button"
+              onClick={onReturnToManager}
+              className="mt-4 rounded-xl bg-[#0F4635] px-4 py-2 text-xs font-bold text-[#FBF6EC]"
+            >
+              Return to household
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const activeGoal =
+    currentMember.savingsGoal || DEFAULT_GOAL;
+
+  const allWishlistGoals =
+    currentMember.wishlistGoals || [];
+
+  const wishlistGoals = allWishlistGoals.filter(
+    (goal) => !goal.isCompleted
   );
 
-  // Wishlist Queue
-  const [wishlist, setWishlist] = useState<SavingsGoal[]>([
-    {
-      id: "goal-2",
-      title: "Pokemon Legends Switch Game",
-      targetAmount: 79.00,
-      currentAmount: 0,
-      categoryIcon: "🎮",
-      categoryName: "Gaming",
-      notes: "Physical cartridge",
-      isCompleted: false,
-    },
-    {
-      id: "goal-3",
-      title: "Nike Junior Running Shoes",
-      targetAmount: 95.00,
-      currentAmount: 0,
-      categoryIcon: "👟",
-      categoryName: "Sports",
-      notes: "For track and PE class",
-      isCompleted: false,
-    },
-  ]);
+  const completedGoals = allWishlistGoals.filter(
+    (goal) => goal.isCompleted
+  );
 
-  // Completed Trophies
-  const [completedGoals, setCompletedGoals] = useState<SavingsGoal[]>([]);
+  const personalBalance =
+    currentMember.personalBalance || 0;
 
-  // Modals & Celebrations
-  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-  const [isCelebratingPurchase, setIsCelebratingPurchase] = useState(false);
+  const availableForOtherThings = Math.max(
+    0,
+    personalBalance - activeGoal.currentAmount
+  );
 
-  const savePct = Math.min(100, Math.round((activeGoal.currentAmount / activeGoal.targetAmount) * 100));
-  const remaining = Math.max(0, activeGoal.targetAmount - activeGoal.currentAmount);
-  const isGoalReached = activeGoal.currentAmount >= activeGoal.targetAmount;
+  const savedPercentageOfBalance =
+    personalBalance > 0
+      ? Math.min(
+          100,
+          (activeGoal.currentAmount /
+            personalBalance) *
+            100
+        )
+      : 0;
 
-  // Add Savings to Goal
+  const availablePercentage =
+    personalBalance > 0
+      ? Math.max(
+          0,
+          100 - savedPercentageOfBalance
+        )
+      : 0;
+
+  const savingsPercentage = Math.min(
+    100,
+    Math.round(
+      (activeGoal.currentAmount /
+        activeGoal.targetAmount) *
+        100
+    )
+  );
+
+  const remainingAmount = Math.max(
+    0,
+    activeGoal.targetAmount -
+      activeGoal.currentAmount
+  );
+
+  const isGoalReached =
+    activeGoal.currentAmount >=
+    activeGoal.targetAmount;
+
+  const totalIncome = dependentTransactions
+    .filter((transaction) => transaction.amount > 0)
+    .reduce(
+      (sum, transaction) =>
+        sum + transaction.amount,
+      0
+    );
+
+  const clearMessagesLater = () => {
+    window.setTimeout(() => {
+      setSuccessMessage(null);
+      setErrorMessage(null);
+    }, 2500);
+  };
+
+  const updateCurrentMember = (
+    changes: Partial<HouseholdMember>
+  ) => {
+    const updatedMembers = state.members.map(
+      (member) =>
+        member.id === currentMember.id
+          ? {
+              ...member,
+              ...changes,
+            }
+          : member
+    );
+
+    onUpdateState({
+      ...state,
+      members: updatedMembers,
+    });
+  };
+
   const handleAddSavings = (amount: number) => {
-    const nextSaved = Math.min(activeGoal.targetAmount, activeGoal.currentAmount + amount);
-    const updatedGoal = { ...activeGoal, currentAmount: nextSaved };
-    setActiveGoal(updatedGoal);
+    setSuccessMessage(null);
+    setErrorMessage(null);
 
-    // If goal completed!
-    if (nextSaved >= activeGoal.targetAmount) {
+    if (amount > availableForOtherThings) {
+      setErrorMessage(
+        `You only have S$${availableForOtherThings.toFixed(
+          2
+        )} available.`
+      );
+
+      clearMessagesLater();
+      return;
+    }
+
+    const amountActuallySaved = Math.min(
+      amount,
+      remainingAmount,
+      availableForOtherThings
+    );
+
+    if (amountActuallySaved <= 0) {
+      return;
+    }
+
+    const newSavedAmount =
+      activeGoal.currentAmount +
+      amountActuallySaved;
+
+    updateCurrentMember({
+      savingsGoal: {
+        ...activeGoal,
+        currentAmount: newSavedAmount,
+        isCompleted:
+          newSavedAmount >= activeGoal.targetAmount,
+      },
+    });
+
+    setSuccessMessage(
+      `S$${amountActuallySaved.toFixed(
+        2
+      )} was allocated to ${activeGoal.title}.`
+    );
+
+    clearMessagesLater();
+
+    if (
+      newSavedAmount >= activeGoal.targetAmount
+    ) {
       confetti({
         particleCount: 150,
         spread: 90,
-        origin: { y: 0.5 },
+        origin: { y: 0.55 },
       });
     }
   };
 
-  // Mark Goal as Purchased & Progress to Next Wishlist Item
+  const handleSaveGoal = (
+    newGoal: SavingsGoal
+  ) => {
+    updateCurrentMember({
+      savingsGoal: {
+        ...newGoal,
+        currentAmount:
+          newGoal.id === activeGoal.id
+            ? activeGoal.currentAmount
+            : newGoal.currentAmount,
+      },
+    });
+
+    setSuccessMessage(
+      `${newGoal.title} is now your active goal.`
+    );
+
+    clearMessagesLater();
+  };
+
+  const handleSwitchGoal = (
+    selectedGoal: SavingsGoal
+  ) => {
+    const previousGoal: SavingsGoal = {
+      ...activeGoal,
+      isCompleted: false,
+    };
+
+    const updatedWishlist = [
+      previousGoal,
+      ...allWishlistGoals.filter(
+        (goal) => goal.id !== selectedGoal.id
+      ),
+    ];
+
+    updateCurrentMember({
+      savingsGoal: {
+        ...selectedGoal,
+        isCompleted: false,
+      },
+      wishlistGoals: updatedWishlist,
+    });
+
+    setSuccessMessage(
+      `${selectedGoal.title} is now your active goal.`
+    );
+
+    clearMessagesLater();
+  };
+
   const handleClaimAndPurchase = () => {
     setIsCelebratingPurchase(true);
+
     confetti({
       particleCount: 200,
       spread: 100,
-      origin: { y: 0.4 },
+      origin: { y: 0.45 },
     });
 
-    const finished = { ...activeGoal, isCompleted: true, completedAt: "Just now" };
-    setCompletedGoals((prev) => [finished, ...prev]);
+    const completedGoal: SavingsGoal = {
+      ...activeGoal,
+      isCompleted: true,
+      completedAt: new Date().toISOString(),
+    };
 
-    setTimeout(() => {
-      setIsCelebratingPurchase(false);
-      // Promote next wishlist item if available
-      if (wishlist.length > 0) {
-        const next = wishlist[0];
-        setActiveGoal(next);
-        setWishlist((prev) => prev.slice(1));
-      } else {
-        // Reset or prompt new goal
-        setActiveGoal({
+    const nextGoal = wishlistGoals[0];
+
+    const updatedWishlist = [
+      completedGoal,
+      ...allWishlistGoals.filter(
+        (goal) =>
+          goal.id !== nextGoal?.id &&
+          goal.id !== activeGoal.id
+      ),
+    ];
+
+    updateCurrentMember({
+      savingsGoal:
+        nextGoal || {
+          ...DEFAULT_GOAL,
           id: `goal-${Date.now()}`,
-          title: "New Wishlist Item",
-          targetAmount: 50.00,
-          currentAmount: 0,
-          categoryIcon: "🎁",
-          categoryName: "General",
-        });
-      }
-    }, 2500);
-  };
+        },
+      wishlistGoals: updatedWishlist,
+    });
 
-  // Switch Active Goal with a Wishlist Item
-  const handleSwitchGoal = (selected: SavingsGoal) => {
-    const prevActive = activeGoal;
-    setActiveGoal(selected);
-    setWishlist((prev) => [prevActive, ...prev.filter((g) => g.id !== selected.id)]);
-  };
-
-  // Save new or edited goal from modal
-  const handleSaveGoalFromModal = (newGoal: SavingsGoal) => {
-    setActiveGoal(newGoal);
+    window.setTimeout(() => {
+      setIsCelebratingPurchase(false);
+    }, 2000);
   };
 
   return (
-    <div className="p-4 space-y-4 bg-[#FDF6E9] min-h-full animate-fadeIn font-sans">
-      {/* Manager Viewing Banner */}
+    <div className="min-h-full space-y-4 bg-[#FDF6E9] p-4 font-sans animate-fadeIn">
       {isManagerViewing && (
-        <div className="bg-[#DDE8E1] border border-[#0F4635]/30 rounded-2xl p-3 flex items-center justify-between text-xs text-[#0F4635] shadow-xs">
-          <div className="flex items-center space-x-2">
-            <Eye className="w-4 h-4 text-[#0F4635] shrink-0" />
+        <div className="flex items-center justify-between rounded-2xl border border-[#0F4635]/30 bg-[#DDE8E1] p-3 text-xs text-[#0F4635]">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+
             <span className="font-semibold">
-              Manager View: {currentMember?.name || "Jia Le"}'s Personal Dashboard
+              Manager View: {currentMember.name}
             </span>
           </div>
+
           {onReturnToManager && (
             <button
+              type="button"
               onClick={onReturnToManager}
-              className="px-2.5 py-1 rounded-xl bg-[#0F4635] text-[#FBF6EC] font-bold text-[10px] hover:bg-[#0A3227] transition shrink-0 cursor-pointer"
+              className="rounded-xl bg-[#0F4635] px-3 py-1.5 text-[10px] font-bold text-[#FBF6EC]"
             >
               Back to Household
             </button>
@@ -166,277 +396,307 @@ export const DependentDashboard: React.FC<DependentDashboardProps> = ({
         </div>
       )}
 
-      {/* 1. Header with Name & Quick Edit Goal */}
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <h1 className="font-display font-bold text-2xl text-[#1B1815] tracking-tight">
-            Hi {currentMember?.name || "Jia Le"}
-          </h1>
-          <p className="text-xs text-[#8A8075]">
-            Pocket Money & Dream Wishlist
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsGoalModalOpen(true)}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#FFFDF8] hover:bg-[#F5F1E7] border border-[#E0D4BF] text-xs font-semibold text-[#0F4635] shadow-xs transition cursor-pointer"
+      {successMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="animate-pop flex items-center gap-3 rounded-2xl border border-[#0F4635]/20 bg-[#DDE8E1] p-3 text-[#0F4635]"
         >
-          <Edit3 className="w-3.5 h-3.5" />
-          <span>Change Goal</span>
-        </button>
-      </div>
-
-      {/* 2. Main Vessel Goal Card with Item Details */}
-      <div className="bg-[#FFFDF8] border-1.5 border-[#F0E0C2] rounded-[26px] p-5 text-center relative overflow-hidden shadow-sm">
-        <div className="flex items-center justify-center gap-1.5 mb-2">
-          <span className="text-lg">{activeGoal.categoryIcon}</span>
-          <span className="text-[11px] font-mono-custom uppercase tracking-wider text-[#9A7420] font-bold">
-            Saving for: {activeGoal.title}
-          </span>
-        </div>
-
-        {/* Big Central Vessel Graphic */}
-        <div className="relative w-36 h-40 mx-auto rounded-2xl rounded-b-[54px] border-[3.5px] border-[#1B1815] overflow-hidden bg-[#FDF6E9] shadow-inner">
-          {/* Animated Liquid Level */}
-          <div
-            className={`absolute left-0 right-0 bottom-0 transition-all duration-700 ${
-              isGoalReached ? "bg-[#0F4635]" : "bg-[#E8A02C]"
-            }`}
-            style={{ height: `${savePct}%` }}
-          />
-
-          {/* Center Saved Amount */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-[#1B1815] select-none z-10">
-            <span className="text-2xl font-display font-bold tracking-tight">
-              S${activeGoal.currentAmount.toFixed(2)}
-            </span>
-            <span className="text-[10px] font-mono-custom opacity-70 font-semibold">
-              of S${activeGoal.targetAmount.toFixed(2)}
-            </span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0F4635] text-[#FBF6EC]">
+            <Check className="h-4 w-4" />
           </div>
 
-          {/* Target Line */}
-          <div className="absolute left-2 right-2 top-[34%] h-0.5 bg-[#1B1815]/20" />
-        </div>
-
-        {/* Goal Status & Progress Note */}
-        <div className="mt-3">
-          {isGoalReached ? (
-            <div className="font-display font-bold text-sm text-[#0F4635] flex items-center justify-center gap-1.5">
-              <Trophy className="w-4 h-4 text-[#E8A02C]" />
-              <span>Goal Completed! Ready to purchase!</span>
-            </div>
-          ) : (
-            <div className="font-display font-bold text-sm text-[#9A7420]">
-              S${remaining.toFixed(2)} more to buy your {activeGoal.title}!
-            </div>
-          )}
-        </div>
-
-        {/* Action: Deposit Pocket Money into Goal or Claim Purchase */}
-        {isGoalReached ? (
-          <button
-            onClick={handleClaimAndPurchase}
-            className="w-full mt-3 bg-[#0F4635] hover:bg-[#0A3227] text-[#FDF6EC] font-display font-bold text-sm py-3 px-4 rounded-2xl shadow-md transition active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <ShoppingBag className="w-4 h-4 text-[#E8A02C]" />
-            <span>Mark as Purchased & Set Next Goal</span>
-          </button>
-        ) : (
-          <div className="space-y-2 mt-3">
-            {/* Quick deposit chips */}
-            <div className="flex gap-2 justify-center">
-              {[2, 5, 8, 10].map((amt) => (
-                <button
-                  key={amt}
-                  onClick={() => handleAddSavings(amt)}
-                  className="flex-1 py-2 rounded-xl bg-[#FBF6EC] hover:bg-[#EDE4D6] border border-[#E0D4BF] text-xs font-bold text-[#1B1815] transition active:scale-95 cursor-pointer"
-                >
-                  +S${amt}
-                </button>
-              ))}
+          <div>
+            <div className="text-xs font-bold">
+              Savings updated
             </div>
 
-            <button
-              onClick={() => handleAddSavings(8)}
-              className="w-full bg-[#0F4635] hover:bg-[#0A3227] text-[#FDF6EC] font-display font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition active:scale-[0.98] cursor-pointer"
-            >
-              Deposit Weekly Pocket Money (+S$8)
-            </button>
-          </div>
-        )}
-
-        {/* Celebration Overlay on Purchase */}
-        {isCelebratingPurchase && (
-          <div className="absolute inset-0 bg-[#0F4635]/95 flex flex-col items-center justify-center gap-2 p-4 animate-pop z-30 text-[#FBF6EC]">
-            <Trophy className="w-12 h-12 text-[#E8A02C] animate-bounce" />
-            <div className="font-display font-bold text-2xl text-center">
-              Item Purchased! 🎉
+            <div className="text-[11px]">
+              {successMessage}
             </div>
-            <div className="text-xs text-[#8FB3A3] text-center max-w-xs">
-              You kept your promise and saved S${activeGoal.targetAmount.toFixed(2)} for your {activeGoal.title}!
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. Wishlist Queue Section */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center space-x-1.5">
-            <Gift className="w-4 h-4 text-[#9A7420]" />
-            <span className="font-display font-bold text-sm text-[#1B1815]">
-              My Wishlist Queue ({wishlist.length})
-            </span>
-          </div>
-          <button
-            onClick={() => setIsGoalModalOpen(true)}
-            className="text-xs font-semibold text-[#0F4635] hover:underline cursor-pointer flex items-center gap-0.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Item</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2">
-          {wishlist.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => handleSwitchGoal(item)}
-              className="p-3 rounded-2xl bg-[#FFFDF8] hover:bg-[#F9F4EB] border border-[#E0D4BF] hover:border-[#0F4635] transition flex items-center justify-between cursor-pointer group shadow-xs"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">{item.categoryIcon}</span>
-                <div>
-                  <div className="text-xs font-bold text-[#1B1815] group-hover:text-[#0F4635] transition">
-                    {item.title}
-                  </div>
-                  <div className="text-[10px] text-[#8A8075]">
-                    {item.notes || "Queued next"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <span className="font-display font-bold text-xs text-[#0F4635]">
-                  S${item.targetAmount.toFixed(2)}
-                </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#EDE4D6] text-[#584F45] group-hover:bg-[#0F4635] group-hover:text-[#FBF6EC] transition">
-                  Make Active
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Completed Goals Trophy Shelf */}
-      {completedGoals.length > 0 && (
-        <div className="space-y-2">
-          <div className="font-display font-bold text-sm text-[#1B1815] px-1 flex items-center gap-1.5">
-            <Trophy className="w-4 h-4 text-[#E8A02C]" />
-            <span>Trophy Shelf (Goals Achieved)</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {completedGoals.map((comp) => (
-              <div
-                key={comp.id}
-                className="p-3 rounded-2xl bg-[#DDE8E1] border border-[#0F4635]/20 text-xs text-[#0F4635] space-y-1"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xl">{comp.categoryIcon}</span>
-                  <span className="font-bold text-[10px] bg-[#0F4635] text-[#FBF6EC] px-1.5 py-0.5 rounded-md">
-                    ✓ BOUGHT
-                  </span>
-                </div>
-                <div className="font-bold truncate">{comp.title}</div>
-                <div className="text-[10px] text-[#2C5A49]">
-                  Saved S${comp.targetAmount.toFixed(2)}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
 
-      {/* 5. Spendable Metrics Row */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="bg-[#FFFDF8] border border-[#F0E0C2] rounded-2xl p-3.5 shadow-sm">
-          <div className="text-[10px] font-mono-custom text-[#9A7420] uppercase font-semibold">
-            Spendable Cash
+      {errorMessage && (
+        <div
+          role="alert"
+          className="rounded-2xl border border-[#D7442A]/30 bg-[#FAE3DD] p-3 text-[#8F2A17]"
+        >
+          <div className="text-xs font-bold">
+            Unable to add savings
           </div>
-          <div className="font-display font-bold text-xl text-[#1B1815] mt-0.5">
-            S$8.50
+
+          <div className="text-[11px]">
+            {errorMessage}
           </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-[#1B1815]">
+            Hi {currentMember.name}
+          </h1>
+
+          <p className="text-xs text-[#8A8075]">
+            Your spending and savings
+          </p>
         </div>
 
-        <div className="bg-[#FFFDF8] border border-[#F0E0C2] rounded-2xl p-3.5 shadow-sm">
-          <div className="text-[10px] font-mono-custom text-[#9A7420] uppercase font-semibold">
-            Weekly Pocket Money
-          </div>
-          <div className="font-display font-bold text-xl text-[#1B1815] mt-0.5">
-            S$50<span className="text-xs font-normal text-[#8A8075]">/wk</span>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsGoalModalOpen(true)}
+          className="flex items-center gap-1.5 rounded-xl border border-[#E0D4BF] bg-[#FFFDF8] px-3 py-1.5 text-xs font-semibold text-[#0F4635]"
+        >
+          <Edit3 className="h-3.5 w-3.5" />
+          Change goal
+        </button>
       </div>
 
-      {/* 6. What Happened Activity Stream */}
-      <div className="space-y-2">
-        <div className="font-display font-bold text-sm text-[#1B1815] px-1">
-          Recent Allowance & Goal Activity
-        </div>
-
-        <div className="rounded-2xl bg-[#FFFDF8] border border-[#F0E0C2] p-2 space-y-1 shadow-sm text-xs">
-          {/* Mum Transfer */}
-          <div className="p-2.5 rounded-xl flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[#DDE8E1] text-[#0F4635] font-bold text-xs flex items-center justify-center">
-                M
-              </div>
-              <div>
-                <div className="font-bold text-[#1B1815]">Ma sent pocket money</div>
-                <div className="text-[10px] text-[#8A8075]">"For the week — save some!"</div>
-              </div>
+      {/* Main personal-balance card */}
+      <section className="relative overflow-hidden rounded-[26px] bg-[#0F4635] p-5 text-[#FBF6EC] shadow-md">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="font-mono-custom text-[11px] font-semibold uppercase tracking-wider text-[#8FB3A3]">
+              Personal balance
             </div>
-            <div className="font-display font-bold text-[#0F4635]">+S$50.00</div>
+
+            <div className="font-display mt-1 text-4xl font-bold">
+              S${personalBalance.toFixed(2)}
+            </div>
+
+            <div className="mt-1 text-xs text-[#8FB3A3]">
+              +S${totalIncome.toFixed(2)} received recently
+            </div>
           </div>
 
-          {/* Canteen Snack */}
-          <div className="p-2.5 rounded-xl flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[#F5EAD6] text-[#9A7420] font-mono-custom font-bold text-xs flex items-center justify-center">
-                $
-              </div>
-              <div>
-                <div className="font-bold text-[#1B1815]">Canteen snack</div>
-                <div className="text-[10px] text-[#8A8075]">Cash • Monday</div>
-              </div>
-            </div>
-            <div className="font-display font-bold text-[#8A8075]">−S$3.50</div>
-          </div>
-
-          {/* Goal Deposit */}
-          <div className="p-2.5 rounded-xl flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[#F5EAD6] text-[#9A7420] font-bold text-xs flex items-center justify-center">
-                ↑
-              </div>
-              <div>
-                <div className="font-bold text-[#1B1815]">Moved to {activeGoal.title}</div>
-                <div className="text-[10px] text-[#8A8075]">{activeGoal.categoryName || "Savings Goal"}</div>
-              </div>
-            </div>
-            <div className="font-display font-bold text-[#9A7420]">S$18.00</div>
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-[#E8A02C] bg-[#0A3227]">
+            <Wallet className="h-6 w-6 text-[#E8A02C]" />
           </div>
         </div>
-      </div>
 
-      {/* Set / Change Goal Modal */}
+        <div className="mt-5 flex h-3 overflow-hidden rounded-full bg-[#0A3227]">
+          <div
+            className="bg-[#E8A02C] transition-all duration-500"
+            style={{
+              width: `${savedPercentageOfBalance}%`,
+            }}
+          />
+
+          <div
+            className="bg-[#8FB3A3] transition-all duration-500"
+            style={{
+              width: `${availablePercentage}%`,
+            }}
+          />
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3 text-[11px]">
+          <div>
+            <div className="font-mono-custom text-[#E8A02C]">
+              ■ SAVED
+            </div>
+
+            <div className="font-display mt-0.5 text-lg font-bold">
+              S${activeGoal.currentAmount.toFixed(2)}
+            </div>
+
+            <div className="text-[#8FB3A3]">
+              For {activeGoal.title}
+            </div>
+          </div>
+
+          <div>
+            <div className="font-mono-custom text-[#B9D2C7]">
+              ■ AVAILABLE
+            </div>
+
+            <div className="font-display mt-0.5 text-lg font-bold">
+              S${availableForOtherThings.toFixed(2)}
+            </div>
+
+            <div className="text-[#8FB3A3]">
+              For other things
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Goal card */}
+      <section className="relative overflow-hidden rounded-[26px] border border-[#F0E0C2] bg-[#FFFDF8] p-5 text-center shadow-sm">
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-xl">
+            {activeGoal.categoryIcon}
+          </span>
+
+          <span className="font-mono-custom text-[11px] font-bold uppercase tracking-wider text-[#9A7420]">
+            Saving for: {activeGoal.title}
+          </span>
+        </div>
+
+        <div className="mx-auto mt-4 h-40 w-36 overflow-hidden rounded-2xl rounded-b-[54px] border-[3px] border-[#1B1815] bg-[#FDF6E9]">
+          <div className="relative h-full">
+            <div
+              className={`absolute inset-x-0 bottom-0 transition-all duration-700 ${
+                isGoalReached
+                  ? "bg-[#0F4635]"
+                  : "bg-[#E8A02C]"
+              }`}
+              style={{
+                height: `${savingsPercentage}%`,
+              }}
+            />
+
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-[#1B1815]">
+              <span className="font-display text-2xl font-bold">
+                S${activeGoal.currentAmount.toFixed(2)}
+              </span>
+
+              <span className="font-mono-custom text-[10px]">
+                of S${activeGoal.targetAmount.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 font-display text-sm font-bold text-[#9A7420]">
+          {isGoalReached
+            ? "Goal completed!"
+            : `S$${remainingAmount.toFixed(2)} remaining`}
+        </div>
+
+        {isGoalReached ? (
+          <button
+            type="button"
+            onClick={handleClaimAndPurchase}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0F4635] px-4 py-3 text-sm font-bold text-[#FBF6EC]"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Mark as purchased
+          </button>
+        ) : (
+          <div className="mt-3 space-y-2">
+            <p className="text-[11px] text-[#8A8075]">
+              Choose how much to allocate to this goal
+            </p>
+
+            <div className="grid grid-cols-4 gap-2">
+              {[2, 5, 8, 10].map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => handleAddSavings(amount)}
+                  disabled={
+                    amount > availableForOtherThings
+                  }
+                  className="rounded-xl border border-[#E0D4BF] bg-[#FBF6EC] py-2 text-xs font-bold text-[#1B1815] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  +S${amount}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isCelebratingPurchase && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#0F4635]/95 text-[#FBF6EC]">
+            <Trophy className="h-12 w-12 text-[#E8A02C]" />
+
+            <div className="mt-2 font-display text-xl font-bold">
+              Goal completed!
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Other goals */}
+      {wishlistGoals.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <Gift className="h-4 w-4 text-[#9A7420]" />
+
+            <h2 className="font-display text-sm font-bold text-[#1B1815]">
+              Other goals
+            </h2>
+          </div>
+
+          {wishlistGoals.map((goal) => (
+            <button
+              key={goal.id}
+              type="button"
+              onClick={() => handleSwitchGoal(goal)}
+              className="flex w-full items-center justify-between rounded-2xl border border-[#E0D4BF] bg-[#FFFDF8] p-3 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">
+                  {goal.categoryIcon}
+                </span>
+
+                <div>
+                  <div className="text-xs font-bold text-[#1B1815]">
+                    {goal.title}
+                  </div>
+
+                  <div className="text-[10px] text-[#8A8075]">
+                    {goal.notes}
+                  </div>
+                </div>
+              </div>
+
+              <span className="text-xs font-bold text-[#0F4635]">
+                S${goal.targetAmount.toFixed(2)}
+              </span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      {/* Completed goals */}
+      {completedGoals.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-display text-sm font-bold text-[#1B1815]">
+            Completed goals
+          </h2>
+
+          <div className="grid grid-cols-2 gap-2">
+            {completedGoals.map((goal) => (
+              <div
+                key={goal.id}
+                className="rounded-2xl bg-[#DDE8E1] p-3"
+              >
+                <div className="text-xl">
+                  {goal.categoryIcon}
+                </div>
+
+                <div className="text-xs font-bold text-[#0F4635]">
+                  {goal.title}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Activity */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2 px-1">
+          <Target className="h-4 w-4 text-[#0F4635]" />
+
+          <h2 className="font-display text-sm font-bold text-[#1B1815]">
+            {currentMember.name}&apos;s recent activity
+          </h2>
+        </div>
+
+        <DependentActivityFeed
+          transactions={dependentTransactions}
+        />
+      </section>
+
       <SetSavingsGoalModal
         isOpen={isGoalModalOpen}
         onClose={() => setIsGoalModalOpen(false)}
-        onSaveGoal={handleSaveGoalFromModal}
+        onSaveGoal={handleSaveGoal}
         currentGoal={activeGoal}
       />
     </div>
