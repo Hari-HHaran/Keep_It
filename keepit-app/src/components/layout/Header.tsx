@@ -11,6 +11,7 @@ interface HeaderProps {
   onSelectTab: (tab: NavTabType) => void;
   onSelectPersona: (personaId: string) => void;
   onResetData: () => void;
+  isLiveBackend?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab,
   onSelectPersona,
   onResetData,
+  isLiveBackend = false,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -53,8 +55,15 @@ export const Header: React.FC<HeaderProps> = ({
     },
   ];
 
-  const currentProfile =
-    PROFILES.find((p) => p.id === state.currentPersonaId) || PROFILES[0];
+  const currentProfile = isLiveBackend
+    ? {
+        id: state.currentPersonaId,
+        name: state.householdName,
+        role: state.members.find((member) => member.id === state.currentMemberId)?.name || "Household member",
+        tag: "Supabase connected",
+        icon: Users,
+      }
+    : PROFILES.find((p) => p.id === state.currentPersonaId) || PROFILES[0];
 
   const isNotHome = activeTab !== "home";
 
@@ -84,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
                   KeepIt
                 </span>
                 <span className="text-[9px] font-mono-custom uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-[#DDE8E1] text-[#0F4635]">
-                  Singpass
+                  {isLiveBackend ? "Synced" : "Demo"}
                 </span>
               </div>
             </div>
@@ -115,10 +124,10 @@ export const Header: React.FC<HeaderProps> = ({
           {isDropdownOpen && (
             <div className="absolute right-0 top-full mt-1.5 w-60 bg-[#FFFDF8] border border-[#D6C9B4] rounded-2xl shadow-xl p-1.5 z-50 animate-slideDown space-y-1">
               <div className="px-2.5 py-1 text-[10px] font-mono-custom uppercase tracking-wider text-[#8A8075] font-semibold">
-                Switch Household Profile
+                {isLiveBackend ? "Connected household" : "Switch demo profile"}
               </div>
 
-              {PROFILES.map((p) => {
+              {!isLiveBackend && PROFILES.map((p) => {
                 const Icon = p.icon;
                 const isSelected = p.id === state.currentPersonaId;
 
@@ -157,6 +166,33 @@ export const Header: React.FC<HeaderProps> = ({
                   </button>
                 );
               })}
+
+              {isLiveBackend && (
+                <>
+                  <div className="rounded-xl bg-[#DDE8E1] p-2.5 text-xs text-[#0F4635]">
+                    Changes are saved to Supabase and shared across signed-in devices.
+                  </div>
+                  <button
+                    onClick={() => {
+                      onResetData();
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full rounded-xl px-2.5 py-2 text-left text-xs font-bold text-[#0F4635] hover:bg-[#F5F1E7]"
+                  >
+                    Refresh backend data
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/auth/logout", { method: "POST" });
+                      localStorage.removeItem("keepit_demo_mode");
+                      window.location.href = "/login";
+                    }}
+                    className="w-full rounded-xl px-2.5 py-2 text-left text-xs font-bold text-[#8F2A17] hover:bg-[#FAE3DD]"
+                  >
+                    Sign out
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
