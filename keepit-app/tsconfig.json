@@ -22,6 +22,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "backend/src/lib/supabase/admin.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "backend/src/lib/supabase/admin.js", "src/lib/gig/gigCalculator.js", "src/lib/gig/wisCalculator.js"],
   "exclude": ["node_modules"]
 }

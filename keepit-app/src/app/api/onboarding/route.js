@@ -192,7 +192,7 @@ export async function POST(request) {
     ) {
       const accounts =
         body.accounts.map(
-          (account: any) => ({
+          (account) => ({
             household_id:
               household.id,
 

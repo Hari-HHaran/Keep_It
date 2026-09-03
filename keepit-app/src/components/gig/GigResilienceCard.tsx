@@ -2,7 +2,10 @@
 
 import React, { useState } from "react";
 import { GigProfile, VehicleType } from "@/lib/types";
-import { calculateNetGigIncome, calculateSafeWeeklySalary } from "@/lib/calculations/gigCalculator";
+import {
+  calculateGigPayout,
+} from "@/lib/gig/gigCalculator";
+
 import { Bike, Shield, Sparkles, CheckCircle2 } from "lucide-react";
 
 interface GigResilienceCardProps {
@@ -17,14 +20,11 @@ export const GigResilienceCard: React.FC<GigResilienceCardProps> = ({ gigProfile
     gigProfile?.grossWeeklyAverage || 850
   );
 
-  const netCalc = calculateNetGigIncome(weeklyGrossInput, selectedVehicle);
-  const safeSalary = calculateSafeWeeklySalary([
-    weeklyGrossInput - 100,
-    weeklyGrossInput + 50,
-    weeklyGrossInput + 120,
-    weeklyGrossInput - 30,
-    weeklyGrossInput,
-  ]);
+const netCalc = calculateGigPayout(
+  weeklyGrossInput,
+  selectedVehicle,
+  0.08
+);
 
   return (
     <div className="space-y-3 font-sans animate-fadeIn">
