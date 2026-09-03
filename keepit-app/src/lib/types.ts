@@ -48,9 +48,10 @@ export interface Transaction {
   description: string;
   amount: number; // positive for income, negative for expense
   category: "Groceries" | "Hawker & Dining" | "Pocket Money" | "Transport" | "Utilities" | "Gig Payout" | "Voucher Redemption" | "Other";
-  source: "DBS" | "OCBC" | "PayNow" | "Cash Receipt" | "Voucher";
+  source: string;
   recipientId?: string; // e.g. Jia Le for pocket money
   memberId: string;
+  accountId?: string;
   opportunityCostNote?: string;
   voucherApplicable?: string;
   isGigIncome?: boolean;
@@ -127,4 +128,7 @@ export interface AppState {
   nudges: ContextualNudge[];
   dismissedNudgeIds?: string[];
   currentSimulatedLocation?: LocationMerchant | null;
+  backendMode?: "supabase" | "demo";
+  householdId?: string;
+  currentMemberId?: string;
 }
