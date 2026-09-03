@@ -1,73 +1,128 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Transaction } from "@/lib/types";
-import { ArrowDownLeft, ArrowUpRight, Sparkles, Utensils, Gift, BookOpen } from "lucide-react";
 
 interface DependentActivityFeedProps {
   transactions: Transaction[];
 }
 
-export const DependentActivityFeed: React.FC<DependentActivityFeedProps> = ({
-  transactions,
-}) => {
+export const DependentActivityFeed: React.FC<
+  DependentActivityFeedProps
+> = ({ transactions }) => {
+  const [filterCategory, setFilterCategory] =
+    useState<string>("All");
+
+  const categories = [
+    "All",
+    "Pocket Money",
+    "Groceries",
+    "Hawker & Dining",
+    "Transport",
+    "Other",
+  ];
+
+  const filteredTransactions =
+    filterCategory === "All"
+      ? transactions
+      : transactions.filter(
+          (transaction) =>
+            transaction.category === filterCategory
+        );
+
   return (
-    <div className="rounded-2xl bg-[#0e1520] border border-slate-800 p-5 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-            Recent Activity
-          </h3>
-          <p className="text-xs text-slate-400">
-            Your pocket money, snacks, and allowances
-          </p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex items-center space-x-1 overflow-x-auto pb-1">
+        {categories.map((category) => (
+          <button
+            key={category}
+            type="button"
+            onClick={() => setFilterCategory(category)}
+            className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold transition ${
+              filterCategory === category
+                ? "bg-[#0F4635] text-[#FBF6EC]"
+                : "border border-[#E0D4BF] bg-[#FFFDF8] text-[#6B6259]"
+            }`}
+          >
+            {category}
+          </button>
+        ))}
       </div>
 
-      <div className="space-y-3">
-        {transactions.map((tx) => {
-          const isIncome = tx.amount > 0;
+      <div className="space-y-1 rounded-2xl border border-[#E0D4BF] bg-[#FFFDF8] p-2 shadow-sm">
+        {filteredTransactions.length === 0 ? (
+          <div className="p-5 text-center">
+            <p className="text-xs font-bold text-[#1B1815]">
+              No activity in this category
+            </p>
 
-          return (
-            <div
-              key={tx.id}
-              className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition"
-            >
-              <div className="flex items-center space-x-3">
+            <p className="mt-1 text-[10px] text-[#8A8075]">
+              Future transactions will appear here.
+            </p>
+          </div>
+        ) : (
+          filteredTransactions.map((transaction) => {
+            const isIncome = transaction.amount > 0;
+
+            const isPocketMoney =
+              transaction.category === "Pocket Money";
+
+            const isCashReceipt =
+              transaction.source === "Cash Receipt";
+
+            const badge = isPocketMoney
+              ? "PN"
+              : isCashReceipt
+              ? "$"
+              : transaction.source === "PayNow"
+              ? "PN"
+              : "BANK";
+
+            return (
+              <div
+                key={transaction.id}
+                className="flex items-center justify-between gap-3 rounded-xl p-2.5 transition hover:bg-[#F5F1E7]"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={`font-mono-custom flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[10px] font-bold ${
+                      isIncome || isPocketMoney
+                        ? "bg-[#DDE8E1] text-[#0F4635]"
+                        : isCashReceipt
+                        ? "bg-[#F5EAD6] text-[#9A7420]"
+                        : "bg-[#EDE4D6] text-[#584F45]"
+                    }`}
+                  >
+                    {badge}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-bold text-[#1B1815]">
+                      {transaction.description}
+                    </div>
+
+                    <div className="truncate text-[10px] text-[#8A8075]">
+                      {transaction.source} •{" "}
+                      {transaction.category} •{" "}
+                      {transaction.date}
+                    </div>
+                  </div>
+                </div>
+
                 <div
-                  className={`p-2 rounded-xl ${
+                  className={`shrink-0 font-display text-xs font-bold ${
                     isIncome
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                      ? "text-[#0F4635]"
+                      : "text-[#1B1815]"
                   }`}
                 >
-                  {isIncome ? (
-                    <ArrowDownLeft className="w-4 h-4" />
-                  ) : (
-                    <ArrowUpRight className="w-4 h-4" />
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">
-                    {tx.description}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {tx.date}
-                  </div>
+                  {isIncome ? "+" : "−"}S$
+                  {Math.abs(transaction.amount).toFixed(2)}
                 </div>
               </div>
-
-              <div
-                className={`text-sm font-extrabold ${
-                  isIncome ? "text-emerald-400" : "text-slate-300"
-                }`}
-              >
-                {isIncome ? "+" : "-"}
-                ${Math.abs(tx.amount).toFixed(2)}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

@@ -17,6 +17,8 @@ export const AccountSummaryCard: React.FC<AccountSummaryCardProps> = ({
 }) => {
   const currentMember = state.members.find((m) => m.role === "manager") || state.members[0];
   const totalVouchers = state.vouchers.reduce((sum, v) => sum + v.balance, 0);
+  const dependents = state.members.filter(
+  (member) => member.role === "dependent" );
 
   return (
     <div className="space-y-3.5">
@@ -30,6 +32,7 @@ export const AccountSummaryCard: React.FC<AccountSummaryCardProps> = ({
             {state.householdName}
           </div>
         </div>
+        
 
         {/* Overlapping member avatars from mockup */}
         <div className="flex items-center">
@@ -148,32 +151,54 @@ export const AccountSummaryCard: React.FC<AccountSummaryCardProps> = ({
             </span>
           </div>
 
-          {/* Kai / Jia Le (Clickable to open Dependent View!) */}
-          <div
-            onClick={() => {
-              if (onViewDependent) onViewDependent("mem-jiale");
-            }}
-            className="flex items-center gap-3 bg-[#FFFDF8] hover:bg-[#F9F4EB] border border-[#EDE4D6] hover:border-[#0F4635] rounded-2xl p-3 shadow-xs cursor-pointer transition group"
-          >
-            <span className="w-7 h-7 rounded-full bg-[#D7442A] text-[#FBF6EC] font-bold text-xs flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              K
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-[#1B1815] group-hover:text-[#0F4635] transition flex items-center gap-1">
-                <span>Jia Le · dependent</span>
-                <Eye className="w-3 h-3 text-[#0F4635]" />
-              </div>
-              <div className="text-[10px] text-[#8A8075]">Saving for a new game • Tap to open dashboard</div>
-            </div>
-            <div className="flex items-center space-x-1">
-              <span className="font-display font-bold text-xs text-[#0F4635]">
-                S$47.50
-              </span>
-              <ChevronRight className="w-4 h-4 text-[#8A8075] group-hover:text-[#0F4635] group-hover:translate-x-0.5 transition" />
-            </div>
-          </div>
-        </div>
+          
+          {/* Dynamic dependent cards */}
+{dependents.map((dependent) => (
+  <button
+    key={dependent.id}
+    type="button"
+    onClick={() => {
+      if (onViewDependent) {
+        onViewDependent(dependent.id);
+      }
+    }}
+    className="flex w-full items-center gap-3 rounded-2xl border border-[#EDE4D6] bg-[#FFFDF8] p-3 text-left shadow-xs transition hover:border-[#0F4635] hover:bg-[#F9F4EB] group"
+  >
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#D7442A] text-xs font-bold text-[#FBF6EC] transition-transform group-hover:scale-105">
+      {dependent.avatarText ||
+        dependent.name.slice(0, 1)}
+    </span>
+
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-1 text-xs font-bold text-[#1B1815] transition group-hover:text-[#0F4635]">
+        <span>
+          {dependent.name} · dependent
+        </span>
+
+        <Eye className="h-3 w-3 text-[#0F4635]" />
+      </div>
+
+      <div className="truncate text-[10px] text-[#8A8075]">
+        {dependent.savingsGoal
+          ? `Saving for ${dependent.savingsGoal.title}`
+          : "No active savings goal"}{" "}
+        • Tap to open dashboard
       </div>
     </div>
+
+    <div className="flex shrink-0 items-center gap-1">
+      <span className="font-display text-xs font-bold text-[#0F4635]">
+        S$
+        {(dependent.personalBalance || 0).toFixed(2)}
+      </span>
+
+      <ChevronRight className="h-4 w-4 text-[#8A8075] transition group-hover:translate-x-0.5 group-hover:text-[#0F4635]" />
+    </div>
+  </button>
+))}
+      </div>
+    </div>
+    </div>
+    
   );
 };

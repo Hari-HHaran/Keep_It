@@ -1,4 +1,15 @@
-import { AppState, GovernmentVoucher, HouseholdMember, Transaction } from "./types";
+import {
+  AppState,
+  GovernmentVoucher,
+  HouseholdMember,
+  Transaction,
+} from "./types";
+
+/*
+ * ========================================================
+ * TAN FAMILY MEMBERS
+ * ========================================================
+ */
 
 export const TAN_FAMILY_MEMBERS: HouseholdMember[] = [
   {
@@ -22,14 +33,41 @@ export const TAN_FAMILY_MEMBERS: HouseholdMember[] = [
     age: 11,
     avatarBg: "bg-amber-600",
     avatarText: "JL",
-    personalBalance: 47.50,
+    personalBalance: 57.5,
+
     savingsGoal: {
-      id: "goal-game",
-      title: "New game",
-      targetAmount: 60.00,
-      currentAmount: 47.50,
-      categoryIcon: "Gamepad2",
+      id: "goal-jiale-game",
+      title: "New Game",
+      targetAmount: 60,
+      currentAmount: 8,
+      categoryIcon: "🎮",
+      categoryName: "Gaming",
+      notes: "A new game to play during the holidays",
+      isCompleted: false,
     },
+
+    wishlistGoals: [
+      {
+        id: "goal-jiale-basketball",
+        title: "Wilson NCAA Basketball",
+        targetAmount: 60,
+        currentAmount: 0,
+        categoryIcon: "🏀",
+        categoryName: "Sports",
+        notes: "For weekend games",
+        isCompleted: false,
+      },
+      {
+        id: "goal-jiale-shoes",
+        title: "Nike Junior Running Shoes",
+        targetAmount: 95,
+        currentAmount: 0,
+        categoryIcon: "👟",
+        categoryName: "Sports",
+        notes: "For track and PE class",
+        isCompleted: false,
+      },
+    ],
   },
   {
     id: "mem-grandma",
@@ -38,9 +76,49 @@ export const TAN_FAMILY_MEMBERS: HouseholdMember[] = [
     age: 72,
     avatarBg: "bg-purple-600",
     avatarText: "GT",
-    personalBalance: 120.00,
+    personalBalance: 120,
+
+    savingsGoal: {
+      id: "goal-grandma-jade-bangle",
+      title: "Jade Bangle",
+      targetAmount: 120,
+      currentAmount: 25,
+      categoryIcon: "💚",
+      categoryName: "Jewellery",
+      notes: "A special jade bangle",
+      isCompleted: false,
+    },
+
+    wishlistGoals: [
+      {
+        id: "goal-grandma-knitting-set",
+        title: "Knitting Set",
+        targetAmount: 45,
+        currentAmount: 0,
+        categoryIcon: "🧶",
+        categoryName: "Hobbies",
+        notes: "Knitting needles and colourful yarn",
+        isCompleted: false,
+      },
+      {
+        id: "goal-grandma-heated-blanket",
+        title: "Heated Blanket",
+        targetAmount: 80,
+        currentAmount: 0,
+        categoryIcon: "🛏️",
+        categoryName: "Comfort",
+        notes: "A warm and comfortable blanket",
+        isCompleted: false,
+      },
+    ],
   },
 ];
+
+/*
+ * ========================================================
+ * TAN FAMILY VOUCHERS
+ * ========================================================
+ */
 
 export const TAN_FAMILY_VOUCHERS: GovernmentVoucher[] = [
   {
@@ -51,8 +129,14 @@ export const TAN_FAMILY_VOUCHERS: GovernmentVoucher[] = [
     balance: 85,
     expiryDate: "31 Dec 2026",
     daysRemaining: 12,
-    description: "Jan 2026 Tranche for supermarket purchases (FairPrice, Sheng Siong, Prime, Giant).",
-    acceptedMerchants: ["FairPrice", "Sheng Siong", "Giant", "Prime Supermarket"],
+    description:
+      "Jan 2026 tranche for supermarket purchases.",
+    acceptedMerchants: [
+      "FairPrice",
+      "Sheng Siong",
+      "Giant",
+      "Prime Supermarket",
+    ],
     isExpiringSoon: true,
   },
   {
@@ -60,11 +144,17 @@ export const TAN_FAMILY_VOUCHERS: GovernmentVoucher[] = [
     name: "Climate Vouchers",
     category: "Climate",
     totalGranted: 300,
-    balance: 310, // including carryover/topup
+    balance: 310,
     expiryDate: "31 Dec 2027",
     daysRemaining: 485,
-    description: "Eligible for 5-tick energy-efficient refrigerators, washing machines, and LED lighting.",
-    acceptedMerchants: ["Courts", "Best Denki", "Gain City", "Harvey Norman"],
+    description:
+      "For eligible energy-efficient appliances and fittings.",
+    acceptedMerchants: [
+      "Courts",
+      "Best Denki",
+      "Gain City",
+      "Harvey Norman",
+    ],
     isExpiringSoon: false,
   },
   {
@@ -75,61 +165,236 @@ export const TAN_FAMILY_VOUCHERS: GovernmentVoucher[] = [
     balance: 217,
     expiryDate: "31 Dec 2026",
     daysRemaining: 120,
-    description: "National Jubilee vouchers for heartland merchants and community services.",
-    acceptedMerchants: ["Heartland Shops", "Community Clinics", "Neighborhood Grocers"],
+    description:
+      "Vouchers for participating community merchants.",
+    acceptedMerchants: [
+      "Heartland Shops",
+      "Community Clinics",
+      "Neighbourhood Grocers",
+    ],
     isExpiringSoon: false,
   },
 ];
 
+/*
+ * ========================================================
+ * TAN FAMILY TRANSACTIONS
+ * Includes different examples for Jia Le and Grandma.
+ * ========================================================
+ */
+
 export const TAN_FAMILY_TRANSACTIONS: Transaction[] = [
+  // Jia Le: pocket money received
   {
-    id: "tx-1",
-    date: "Today, 11:30 AM",
-    description: "FairPrice Supermarket (Tampines)",
-    amount: -24.50,
-    category: "Groceries",
-    source: "Cash Receipt",
-    memberId: "mem-meiling",
-    opportunityCostNote: "CDC Supermarket vouchers could have covered this $24.50 expense!",
-  },
-  {
-    id: "tx-2",
-    date: "Yesterday, 6:45 PM",
-    description: "Pocket money to Jia Le (PayNow)",
-    amount: -10.00,
+    id: "tx-jiale-pocket-money",
+    date: "Today, 8:00 AM",
+    description: "Pocket money from Mei Ling",
+    amount: -10,
     category: "Pocket Money",
     source: "PayNow",
     recipientId: "mem-jiale",
     memberId: "mem-meiling",
   },
+
+  // Jia Le: groceries
   {
-    id: "tx-3",
+    id: "tx-jiale-groceries",
+    date: "Yesterday, 4:15 PM",
+    description: "FairPrice snacks and juice",
+    amount: -6.4,
+    category: "Groceries",
+    source: "Cash Receipt",
+    memberId: "mem-jiale",
+  },
+
+  // Jia Le: hawker and dining
+  {
+    id: "tx-jiale-canteen",
+    date: "Yesterday, 12:30 PM",
+    description: "School canteen chicken rice",
+    amount: -3.5,
+    category: "Hawker & Dining",
+    source: "Cash Receipt",
+    memberId: "mem-jiale",
+  },
+
+  {
+    id: "tx-jiale-bubble-tea",
+    date: "2 days ago",
+    description: "Bubble tea after school",
+    amount: -4.2,
+    category: "Hawker & Dining",
+    source: "PayNow",
+    memberId: "mem-jiale",
+  },
+
+  // Jia Le: transport
+  {
+    id: "tx-jiale-transport",
+    date: "3 days ago",
+    description: "SimplyGo bus fare",
+    amount: -1.1,
+    category: "Transport",
+    source: "DBS",
+    memberId: "mem-jiale",
+  },
+
+  // Jia Le: other
+  {
+    id: "tx-jiale-bookstore",
+    date: "4 days ago",
+    description: "School bookstore notebook",
+    amount: -4.8,
+    category: "Other",
+    source: "Cash Receipt",
+    memberId: "mem-jiale",
+  },
+
+  {
+    id: "tx-jiale-birthday",
+    date: "1 week ago",
+    description: "Birthday money from Grandma",
+    amount: 20,
+    category: "Other",
+    source: "Cash Receipt",
+    memberId: "mem-jiale",
+  },
+
+  // Grandma: allowance received
+  {
+    id: "tx-grandma-allowance",
+    date: "Today, 9:00 AM",
+    description: "Household allowance from Mei Ling",
+    amount: -30,
+    category: "Pocket Money",
+    source: "PayNow",
+    recipientId: "mem-grandma",
+    memberId: "mem-meiling",
+  },
+
+  // Grandma: groceries
+  {
+    id: "tx-grandma-sheng-siong",
+    date: "Yesterday, 10:30 AM",
+    description: "Sheng Siong groceries",
+    amount: -28.6,
+    category: "Groceries",
+    source: "Cash Receipt",
+    memberId: "mem-grandma",
+  },
+
+  {
+    id: "tx-grandma-fairprice",
+    date: "2 days ago",
+    description: "FairPrice milk and fruit",
+    amount: -12.4,
+    category: "Groceries",
+    source: "Cash Receipt",
+    memberId: "mem-grandma",
+  },
+
+  // Grandma: hawker and dining
+  {
+    id: "tx-grandma-fish-soup",
+    date: "3 days ago",
+    description: "Fish soup at Bedok Hawker Centre",
+    amount: -6.5,
+    category: "Hawker & Dining",
+    source: "Cash Receipt",
+    memberId: "mem-grandma",
+  },
+
+  {
+    id: "tx-grandma-kopi",
+    date: "4 days ago",
+    description: "Kopi and toast at the coffee shop",
+    amount: -3.2,
+    category: "Hawker & Dining",
+    source: "Cash Receipt",
+    memberId: "mem-grandma",
+  },
+
+  // Grandma: transport
+  {
+    id: "tx-grandma-transport",
+    date: "5 days ago",
+    description: "Senior concession card top-up",
+    amount: -10,
+    category: "Transport",
+    source: "PayNow",
+    memberId: "mem-grandma",
+  },
+
+  // Grandma: other
+  {
+    id: "tx-grandma-toiletries",
+    date: "6 days ago",
+    description: "Guardian toiletries",
+    amount: -12.9,
+    category: "Other",
+    source: "PayNow",
+    memberId: "mem-grandma",
+  },
+
+  {
+    id: "tx-grandma-yarn",
+    date: "1 week ago",
+    description: "Yarn for knitting",
+    amount: -8.5,
+    category: "Other",
+    source: "Cash Receipt",
+    memberId: "mem-grandma",
+  },
+
+  // General manager transactions
+  {
+    id: "tx-household-fairprice",
+    date: "Today, 11:30 AM",
+    description: "FairPrice Supermarket (Tampines)",
+    amount: -24.5,
+    category: "Groceries",
+    source: "Cash Receipt",
+    memberId: "mem-meiling",
+    opportunityCostNote:
+      "CDC Supermarket vouchers could have covered this S$24.50 expense!",
+  },
+
+  {
+    id: "tx-household-utilities",
     date: "2 days ago",
     description: "SP Group Utilities Bill",
-    amount: -138.20,
+    amount: -138.2,
     category: "Utilities",
     source: "DBS",
     memberId: "mem-weihan",
   },
+
   {
-    id: "tx-4",
+    id: "tx-household-hawker",
     date: "3 days ago",
     description: "Bedok 85 Hawker Dinner",
-    amount: -16.80,
+    amount: -16.8,
     category: "Hawker & Dining",
     source: "PayNow",
     memberId: "mem-meiling",
   },
+
   {
-    id: "tx-5",
+    id: "tx-household-salary",
     date: "4 days ago",
     description: "Salary Credit (Mei Ling)",
-    amount: 2850.00,
+    amount: 2850,
     category: "Other",
     source: "DBS",
     memberId: "mem-meiling",
   },
 ];
+
+/*
+ * ========================================================
+ * TAN FAMILY STATE
+ * ========================================================
+ */
 
 export const INITIAL_APP_STATE: AppState = {
   currentPersonaId: "tan_family",
@@ -137,6 +402,7 @@ export const INITIAL_APP_STATE: AppState = {
   totalHouseholdBalance: 4285,
   thisMonthsSpend: 1940,
   members: TAN_FAMILY_MEMBERS,
+
   bankAccounts: [
     {
       id: "acc-dbs",
@@ -166,6 +432,7 @@ export const INITIAL_APP_STATE: AppState = {
       icon: "Smartphone",
     },
   ],
+
   accounts: [
     {
       id: "acc-dbs",
@@ -195,38 +462,48 @@ export const INITIAL_APP_STATE: AppState = {
       icon: "Smartphone",
     },
   ],
+
   transactions: TAN_FAMILY_TRANSACTIONS,
   vouchers: TAN_FAMILY_VOUCHERS,
+
   nudges: [
     {
       id: "nudge-init-1",
       type: "opportunity_cost",
-      title: "Opportunity Cost Alert: Expiring CDC Vouchers",
-      message: "You spent $24.50 in cash on groceries at FairPrice, but you have $85 in CDC Supermarket vouchers expiring in 12 days! Using your vouchers first protects your disposable cash.",
+      title:
+        "Opportunity Cost Alert: Expiring CDC Vouchers",
+      message:
+        "You spent S$24.50 in cash at FairPrice, but you have S$85 in CDC vouchers expiring soon.",
       severity: "alert",
       actionText: "View Expiring Vouchers",
       actionUrl: "#vouchers",
       timestamp: "Today",
     },
   ],
+
   currentSimulatedLocation: {
     id: "loc-fairprice",
     name: "NTUC FairPrice (Tampines Mall)",
     locationName: "Tampines Central",
     acceptedVouchers: ["CDC_Supermarket"],
     distanceMeters: 85,
-    discountNote: "Accepts CDC Supermarket Vouchers (Balance: $85 left, Expires in 12 days)",
+    discountNote:
+      "Accepts CDC Supermarket Vouchers",
   },
 };
 
-/**
- * Persona 2: Marcus (24, Solo Gig Platform Worker - Lalamove)
+/*
+ * ========================================================
+ * MARCUS — GIG WORKER
+ * ========================================================
  */
+
 export const MARCUS_GIG_STATE: AppState = {
   currentPersonaId: "marcus_gig",
   householdName: "Marcus (Platform Worker)",
   totalHouseholdBalance: 2170,
   thisMonthsSpend: 1120,
+
   members: [
     {
       id: "mem-marcus",
@@ -239,6 +516,7 @@ export const MARCUS_GIG_STATE: AppState = {
       vehicleType: "motorcycle_pmd",
     },
   ],
+
   bankAccounts: [
     {
       id: "acc-posb",
@@ -259,6 +537,7 @@ export const MARCUS_GIG_STATE: AppState = {
       icon: "Smartphone",
     },
   ],
+
   accounts: [
     {
       id: "acc-posb",
@@ -279,31 +558,50 @@ export const MARCUS_GIG_STATE: AppState = {
       icon: "Smartphone",
     },
   ],
+
   gigProfile: {
     workerType: "platform_worker",
     platformName: "Lalamove & GrabFood",
     vehicleType: "motorcycle_pmd",
-    fedaPercentage: 35, // 35% deduction for motorcycle
+    fedaPercentage: 35,
     grossWeeklyAverage: 820,
     safeWeeklySalary: 540,
     bufferSaved: 310,
     monthlyWisEligible: true,
     wisMonthlyAmount: 180,
-    wisCashSplit: 18, // 10%
-    wisMedisaveSplit: 162, // 90%
+    wisCashSplit: 18,
+    wisMedisaveSplit: 162,
+
     wisPayoutStatus: [
-      { month: "Jan 2026", status: "received", amount: 180 },
-      { month: "Feb 2026", status: "received", amount: 180 },
-      { month: "Mar 2026", status: "expected", amount: 180 },
-      { month: "Apr 2026", status: "pending", amount: 180 },
+      {
+        month: "Jan 2026",
+        status: "received",
+        amount: 180,
+      },
+      {
+        month: "Feb 2026",
+        status: "received",
+        amount: 180,
+      },
+      {
+        month: "Mar 2026",
+        status: "expected",
+        amount: 180,
+      },
+      {
+        month: "Apr 2026",
+        status: "pending",
+        amount: 180,
+      },
     ],
   },
+
   transactions: [
     {
       id: "tx-m1",
       date: "Today, 2:00 PM",
-      description: "Lalamove Weekly Payout (Gross: $890.00)",
-      amount: 890.00,
+      description: "Lalamove Weekly Payout",
+      amount: 890,
       category: "Gig Payout",
       source: "PayNow",
       memberId: "mem-marcus",
@@ -312,8 +610,8 @@ export const MARCUS_GIG_STATE: AppState = {
     {
       id: "tx-m2",
       date: "Yesterday",
-      description: "Esso Petrol Station (Motorcycle Refuel)",
-      amount: -22.00,
+      description: "Esso Motorcycle Refuel",
+      amount: -22,
       category: "Transport",
       source: "PayNow",
       memberId: "mem-marcus",
@@ -321,68 +619,72 @@ export const MARCUS_GIG_STATE: AppState = {
     {
       id: "tx-m3",
       date: "3 days ago",
-      description: "Kopitiam Chicken Rice & Kopi",
-      amount: -6.50,
+      description: "Kopitiam Chicken Rice",
+      amount: -6.5,
       category: "Hawker & Dining",
       source: "Cash Receipt",
       memberId: "mem-marcus",
     },
   ],
+
   vouchers: [
     {
       id: "vouch-wis-monthly",
-      name: "Workfare Income Supplement (WIS / PCTS)",
+      name: "Workfare Income Supplement",
       category: "Workfare_WIS",
       totalGranted: 2160,
       balance: 180,
-      expiryDate: "Monthly Payout (Mar 2026)",
+      expiryDate: "Monthly Payout",
       daysRemaining: 18,
-      description: "Platform Workers CPF Transition Support. $18.00 Cash + $162.00 MediSave split.",
-      acceptedMerchants: ["Direct Bank Deposit / CPF Board"],
+      description:
+        "S$18 cash and S$162 MediSave.",
+      acceptedMerchants: ["Direct Bank Deposit"],
       isExpiringSoon: false,
     },
     {
       id: "vouch-marcus-cdc",
-      name: "CDC Vouchers (Solo Citizen)",
+      name: "CDC Vouchers",
       category: "CDC_Supermarket",
       totalGranted: 300,
       balance: 120,
       expiryDate: "31 Dec 2026",
       daysRemaining: 120,
-      description: "CDC Supermarket vouchers for solo household.",
-      acceptedMerchants: ["FairPrice", "Sheng Siong"],
+      description: "CDC Supermarket vouchers.",
+      acceptedMerchants: [
+        "FairPrice",
+        "Sheng Siong",
+      ],
       isExpiringSoon: false,
     },
   ],
+
   nudges: [
     {
       id: "nudge-m-1",
       type: "gig_buffer",
-      title: "Weekly Income Smoothed ($540 Safe Salary)",
-      message: "This week's gross payout was $890. After 35% FEDA and CPF, your $350 surplus was deposited into your Lean-Week Buffer (Total buffer: $310).",
+      title: "Weekly Income Smoothed",
+      message:
+        "Your surplus was added to your lean-week buffer.",
       severity: "info",
       timestamp: "Today",
     },
-    {
-      id: "nudge-m-2",
-      type: "opportunity_cost",
-      title: "WIS March Payout Confirmed",
-      message: "Your March Workfare ($180: $18 Cash + $162 MediSave) is on track to deposit on the 28th.",
-      severity: "info",
-      timestamp: "Yesterday",
-    },
   ],
+
   currentSimulatedLocation: null,
 };
 
-/**
- * Persona 3: Jia Le (Age 11, Child Dependent)
+/*
+ * ========================================================
+ * JIA LE — DEPENDENT PERSONA
+ * ========================================================
  */
+
 export const JIA_LE_STATE: AppState = {
   currentPersonaId: "jia_le",
   householdName: "Jia Le's Pocket Ledger",
-  totalHouseholdBalance: 47.50,
-  thisMonthsSpend: 15.50,
+  totalHouseholdBalance: 57.5,
+  thisMonthsSpend: 20,
+
   members: [
     {
       id: "mem-jiale",
@@ -391,98 +693,164 @@ export const JIA_LE_STATE: AppState = {
       age: 11,
       avatarBg: "bg-amber-600",
       avatarText: "JL",
-      personalBalance: 47.50,
+      personalBalance: 57.5,
+
       savingsGoal: {
-        id: "goal-game",
-        title: "Wilson NCAA Basketball",
-        targetAmount: 60.00,
-        currentAmount: 47.50,
-        categoryIcon: "🏀",
+        id: "goal-jiale-game",
+        title: "New Game",
+        targetAmount: 60,
+        currentAmount: 8,
+        categoryIcon: "🎮",
+        categoryName: "Gaming",
+        notes:
+          "A new game to play during the holidays",
+        isCompleted: false,
       },
+
+      wishlistGoals: [
+        {
+          id: "goal-jiale-basketball",
+          title: "Wilson NCAA Basketball",
+          targetAmount: 60,
+          currentAmount: 0,
+          categoryIcon: "🏀",
+          categoryName: "Sports",
+          notes: "For weekend games",
+          isCompleted: false,
+        },
+        {
+          id: "goal-jiale-shoes",
+          title: "Nike Junior Running Shoes",
+          targetAmount: 95,
+          currentAmount: 0,
+          categoryIcon: "👟",
+          categoryName: "Sports",
+          notes: "For track and PE class",
+          isCompleted: false,
+        },
+      ],
     },
   ],
+
   bankAccounts: [
     {
       id: "acc-smart-buddy",
-      bankName: "My Pocket Money (Smart Buddy Card)",
+      bankName: "My Pocket Money",
       accountNumber: "JL-8291",
       accountType: "wallet",
-      balance: 47.50,
+      balance: 57.5,
       lastSynced: "Real-time",
       icon: "CreditCard",
     },
   ],
+
   accounts: [
     {
       id: "acc-smart-buddy",
-      bankName: "My Pocket Money (Smart Buddy Card)",
+      bankName: "My Pocket Money",
       accountNumber: "JL-8291",
       accountType: "wallet",
-      balance: 47.50,
+      balance: 57.5,
       lastSynced: "Real-time",
       icon: "CreditCard",
     },
   ],
+
   transactions: [
     {
       id: "tx-jl-1",
-      date: "Yesterday",
-      description: "Pocket money from Mum",
-      amount: 10.00,
+      date: "Today, 8:00 AM",
+      description: "Pocket money from Mei Ling",
+      amount: 10,
       category: "Pocket Money",
       source: "PayNow",
       memberId: "mem-jiale",
     },
     {
       id: "tx-jl-2",
-      date: "3 days ago",
-      description: "Canteen snack (Waffle & Milo)",
-      amount: -2.50,
-      category: "Hawker & Dining",
+      date: "Yesterday, 4:15 PM",
+      description: "FairPrice snacks and juice",
+      amount: -6.4,
+      category: "Groceries",
       source: "Cash Receipt",
       memberId: "mem-jiale",
     },
     {
       id: "tx-jl-3",
-      date: "1 week ago",
-      description: "Birthday money from Grandma",
-      amount: 20.00,
-      category: "Other",
+      date: "Yesterday, 12:30 PM",
+      description: "School canteen chicken rice",
+      amount: -3.5,
+      category: "Hawker & Dining",
       source: "Cash Receipt",
       memberId: "mem-jiale",
     },
     {
       id: "tx-jl-4",
-      date: "2 weeks ago",
-      description: "School bookstore eraser & notebook",
-      amount: -3.00,
+      date: "2 days ago",
+      description: "Bubble tea after school",
+      amount: -4.2,
+      category: "Hawker & Dining",
+      source: "PayNow",
+      memberId: "mem-jiale",
+    },
+    {
+      id: "tx-jl-5",
+      date: "3 days ago",
+      description: "SimplyGo bus fare",
+      amount: -1.1,
+      category: "Transport",
+      source: "DBS",
+      memberId: "mem-jiale",
+    },
+    {
+      id: "tx-jl-6",
+      date: "4 days ago",
+      description: "School bookstore notebook",
+      amount: -4.8,
+      category: "Other",
+      source: "Cash Receipt",
+      memberId: "mem-jiale",
+    },
+    {
+      id: "tx-jl-7",
+      date: "1 week ago",
+      description: "Birthday money from Grandma",
+      amount: 20,
       category: "Other",
       source: "Cash Receipt",
       memberId: "mem-jiale",
     },
   ],
+
   vouchers: [],
+
   nudges: [
     {
       id: "nudge-jl-1",
       type: "opportunity_cost",
-      title: "Great job saving! 🏀",
-      message: "You have saved $47.50! Only $12.50 more to reach your 'Wilson NCAA Basketball' goal!",
+      title: "Keep saving!",
+      message:
+        "You are making progress towards your New Game goal.",
       severity: "info",
       timestamp: "Today",
     },
   ],
+
   currentSimulatedLocation: null,
 };
 
-/**
- * Persona 4: Alex (Solo Young Adult)
+/*
+ * ========================================================
+ * ALEX — YOUNG ADULT
+ * ========================================================
  */
+
 export const ALEX_STATE: AppState = {
   currentPersonaId: "alex_young_adult",
   householdName: "Alex (Young Adult)",
   totalHouseholdBalance: 5200,
   thisMonthsSpend: 1450,
+
   members: [
     {
       id: "mem-alex",
@@ -494,6 +862,7 @@ export const ALEX_STATE: AppState = {
       workerType: "regular_income",
     },
   ],
+
   bankAccounts: [
     {
       id: "acc-posb-alex",
@@ -505,6 +874,7 @@ export const ALEX_STATE: AppState = {
       icon: "Building2",
     },
   ],
+
   accounts: [
     {
       id: "acc-posb-alex",
@@ -516,12 +886,13 @@ export const ALEX_STATE: AppState = {
       icon: "Building2",
     },
   ],
+
   transactions: [
     {
       id: "tx-a1",
       date: "Today, 1:15 PM",
       description: "Cold Storage Groceries",
-      amount: -34.80,
+      amount: -34.8,
       category: "Groceries",
       source: "DBS",
       memberId: "mem-alex",
@@ -529,8 +900,8 @@ export const ALEX_STATE: AppState = {
     {
       id: "tx-a2",
       date: "2 days ago",
-      description: "MRT & Bus Fare (SimplyGo)",
-      amount: -18.20,
+      description: "MRT and Bus Fare",
+      amount: -18.2,
       category: "Transport",
       source: "DBS",
       memberId: "mem-alex",
@@ -539,12 +910,13 @@ export const ALEX_STATE: AppState = {
       id: "tx-a3",
       date: "5 days ago",
       description: "Monthly Salary Credit",
-      amount: 3800.00,
+      amount: 3800,
       category: "Other",
       source: "DBS",
       memberId: "mem-alex",
     },
   ],
+
   vouchers: [
     {
       id: "vouch-alex-cdc",
@@ -554,11 +926,17 @@ export const ALEX_STATE: AppState = {
       balance: 150,
       expiryDate: "31 Dec 2026",
       daysRemaining: 120,
-      description: "CDC Supermarket and Hawker voucher tranche.",
-      acceptedMerchants: ["FairPrice", "Sheng Siong", "Hawkers"],
+      description:
+        "CDC Supermarket and Hawker voucher tranche.",
+      acceptedMerchants: [
+        "FairPrice",
+        "Sheng Siong",
+        "Hawkers",
+      ],
       isExpiringSoon: false,
     },
   ],
+
   nudges: [],
   currentSimulatedLocation: null,
 };
