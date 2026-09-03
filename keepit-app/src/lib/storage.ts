@@ -26,21 +26,13 @@ export function loadSavedState(
     return INITIAL_APP_STATE;
   }
 
-  const requestedPersona =
-    personaId || "tan_family";
-
   try {
-    const raw = localStorage.getItem(
-      STORAGE_KEY
-    );
+    const raw = localStorage.getItem(STORAGE_KEY);
 
     if (raw) {
       const parsed: AppState = JSON.parse(raw);
 
-      if (
-        parsed.currentPersonaId ===
-        requestedPersona
-      ) {
+      if (!personaId || parsed.currentPersonaId === personaId) {
         return parsed;
       }
     }
@@ -52,7 +44,7 @@ export function loadSavedState(
   }
 
   return getSeedStateForPersona(
-    requestedPersona
+    personaId || "alex_young_adult"
   );
 }
 

@@ -18,6 +18,7 @@ interface HouseholdMembersListProps {
   onViewDependent?: (
     dependentId: string
   ) => void;
+  onOpenAddDependent?: () => void;
 }
 
 export const HouseholdMembersList: React.FC<
@@ -26,6 +27,7 @@ export const HouseholdMembersList: React.FC<
   state,
   onSendPocketMoney,
   onViewDependent,
+  onOpenAddDependent,
 }) => {
   const [
     sentAllowanceMemberId,
@@ -179,21 +181,38 @@ export const HouseholdMembersList: React.FC<
         <div className="font-mono-custom flex items-center justify-between px-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#8A8075]">
           <span>Dependents • Tap to view</span>
 
-          <span className="font-bold text-[#0F4635]">
-            Tap profile ›
-          </span>
+          {onOpenAddDependent && (
+            <button
+              type="button"
+              onClick={onOpenAddDependent}
+              className="font-bold text-[#0F4635] hover:underline cursor-pointer"
+            >
+              + Add Dependent
+            </button>
+          )}
         </div>
 
         {dependents.length === 0 ? (
-          <div className="rounded-2xl border border-[#EDE4D6] bg-[#FFFDF8] p-5 text-center">
-            <p className="text-xs font-bold text-[#1B1815]">
-              No dependents added
-            </p>
+          <div className="rounded-2xl border border-[#EDE4D6] bg-[#FFFDF8] p-5 text-center space-y-3">
+            <div>
+              <p className="text-xs font-bold text-[#1B1815]">
+                No dependents added yet
+              </p>
 
-            <p className="mt-1 text-[11px] text-[#8A8075]">
-              Dependents will appear here after they
-              are added to the household.
-            </p>
+              <p className="mt-1 text-[11px] text-[#8A8075]">
+                Register a child or senior to track pocket money, set savings goals, and give them a safe private view.
+              </p>
+            </div>
+
+            {onOpenAddDependent && (
+              <button
+                type="button"
+                onClick={onOpenAddDependent}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F4635] hover:bg-[#0A3227] text-[#FBF6EC] text-xs font-bold shadow-xs transition active:scale-95"
+              >
+                <span>+ Register Dependent</span>
+              </button>
+            )}
           </div>
         ) : (
           dependents.map((dependent) => (

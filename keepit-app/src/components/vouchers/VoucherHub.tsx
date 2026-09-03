@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { AppState, GovernmentVoucher, LocationMerchant } from "@/lib/types";
 import { AddVoucherModal } from "./AddVoucherModal";
 import { SpendPacingCard } from "./SpendPacingCard";
-import { Plus, ChevronRight, Check, AlertCircle, Sparkles, Tag } from "lucide-react";
+import { VoucherBreakdownModal } from "./VoucherBreakdownModal";
+import { Plus, ChevronRight, Check, AlertCircle, Sparkles, Tag, Layers, ShoppingCart, Utensils, Zap } from "lucide-react";
 
 interface VoucherHubProps {
   state: AppState;
@@ -20,8 +21,15 @@ export const VoucherHub: React.FC<VoucherHubProps> = ({
   onSelectLocation,
 }) => {
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [selectedSchemeBreakdown, setSelectedSchemeBreakdown] = useState<"cdc" | "climate" | "sg60" | null>(null);
+
   const regularVouchers = state.vouchers.filter((v) => v.category !== "Workfare_WIS");
+  const totalUnspent = regularVouchers.reduce((s, v) => s + v.balance, 0);
   const isPlatform = state.currentPersonaId === "marcus_gig" || state.gigProfile !== undefined;
+
+  const cdcVoucher = state.vouchers.find((v) => v.category === "CDC_Supermarket" || v.name.toLowerCase().includes("cdc"));
+  const climateVoucher = state.vouchers.find((v) => v.category === "Climate" || v.name.toLowerCase().includes("climate"));
+  const sg60Voucher = state.vouchers.find((v) => v.category === "SG60" || v.name.toLowerCase().includes("sg60"));
 
   // Check for any opportunity cost nudges generated from the ledger
   const flaggedNudges = state.nudges.filter((n) => n.type === "opportunity_cost");
@@ -35,7 +43,7 @@ export const VoucherHub: React.FC<VoucherHubProps> = ({
             Money already yours
           </h2>
           <p className="text-xs text-[#8A8075]">
-            S$1,140 unspent across active government schemes
+            S${totalUnspent.toLocaleString("en-SG", { minimumFractionDigits: 0 })} unspent across active government schemes
           </p>
         </div>
 
@@ -48,7 +56,7 @@ export const VoucherHub: React.FC<VoucherHubProps> = ({
         </button>
       </div>
 
-      {/* Flagged Ledger Spending Notice (Your Excellent Suggestion!) */}
+      {/* Flagged Ledger Spending Notice */}
       {flaggedNudges.length > 0 && (
         <div className="bg-[#FFFDF8] border-1.5 border-[#D7442A] rounded-[22px] p-4 shadow-sm space-y-2.5">
           <div className="flex items-center justify-between">
@@ -69,107 +77,137 @@ export const VoucherHub: React.FC<VoucherHubProps> = ({
 
           <div className="pt-1 flex items-center justify-between">
             <span className="text-[11px] text-[#8F2A17] font-medium">
-              💡 Tip: Show CDC voucher barcode at supermarket checkout
+              💡 Tip: Use CDC vouchers for supermarket and hawker meals
             </span>
             <button
-              onClick={() => onRedeemVoucher("vouch-cdc-supermarket", 10)}
+              onClick={() => setSelectedSchemeBreakdown("cdc")}
               className="px-3 py-1 rounded-xl bg-[#0F4635] text-[#FBF6EC] font-bold text-[11px] hover:bg-[#0A3227] transition cursor-pointer"
             >
-              Use S$10 Now
+              View Breakdown
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Voucher Cards Stack (Exact Screen 04) */}
+      {/* Main Voucher Cards Stack with Click-to-Breakdown (CDC, Climate, SG60) */}
       <div className="space-y-2.5">
         {/* 1. CDC Vouchers 2026 (Urgent Terracotta Border) */}
-        <div className="bg-[#FFFDF8] border-1.5 border-[#D7442A] rounded-[20px] p-4 relative overflow-hidden shadow-sm">
+        <div 
+          onClick={() => setSelectedSchemeBreakdown("cdc")}
+          className="bg-[#FFFDF8] border-1.5 border-[#D7442A] rounded-[20px] p-4 relative overflow-hidden shadow-sm hover:bg-[#FDFBF7] cursor-pointer transition group"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-5 h-5 rounded-md bg-[#D7442A] text-[#FBF6EC] font-mono-custom font-bold text-[10px] flex items-center justify-center">
                   C
                 </span>
-                <span className="text-sm font-bold text-[#1B1815]">
+                <span className="text-sm font-bold text-[#1B1815] group-hover:text-[#D7442A] transition">
                   CDC Vouchers 2026
+                </span>
+                <span className="text-[9px] font-mono-custom font-bold text-[#0F4635] bg-[#DDE8E1] px-1.5 py-0.5 rounded">
+                  2 Splits
                 </span>
               </div>
               <div className="font-display font-bold text-2xl text-[#1B1815] tracking-tight">
-                S$240<span className="text-sm font-normal text-[#8A8075]">.00 left</span>
+                S${(cdcVoucher ? cdcVoucher.balance : 240).toLocaleString("en-SG")}<span className="text-sm font-normal text-[#8A8075]">.00 left</span>
               </div>
               <div className="text-[11px] text-[#8A8075] mt-1">
-                of S$500 • heartland shops + supermarkets
+                Supermarkets (S${((cdcVoucher ? cdcVoucher.balance : 240) / 2).toFixed(0)}) + Hawkers (S${((cdcVoucher ? cdcVoucher.balance : 240) / 2).toFixed(0)})
               </div>
             </div>
 
-            <span className="bg-[#D7442A] text-[#FBF6EC] font-semibold text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
-              12 days
-            </span>
+            <div className="flex flex-col items-end gap-1.5">
+              <span className="bg-[#D7442A] text-[#FBF6EC] font-semibold text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
+                12 days
+              </span>
+              <span className="text-[10px] text-[#D7442A] font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                Breakdown <ChevronRight className="w-3 h-3" />
+              </span>
+            </div>
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-[#EDE4D6] flex items-center justify-between text-xs">
             <span className="text-[#8F2A17] font-medium text-[11px]">
               ≈ S$20/day to use it all. Two grocery runs does it.
             </span>
-            <button
-              onClick={() => onRedeemVoucher("vouch-cdc-supermarket", 10)}
-              className="px-2.5 py-1 rounded-lg bg-[#FAE3DD] text-[#8F2A17] font-bold text-[10px] hover:bg-[#F7D8D0] transition cursor-pointer"
-            >
-              Use S$10
-            </button>
+            <span className="px-2.5 py-1 rounded-lg bg-[#FAE3DD] text-[#8F2A17] font-bold text-[10px] hover:bg-[#F7D8D0] transition">
+              Tap to view split ›
+            </span>
           </div>
         </div>
 
-        {/* 2. Climate Vouchers */}
-        <div className="bg-[#FFFDF8] border border-[#EDE4D6] rounded-[20px] p-4 shadow-sm">
+        {/* 2. Climate Vouchers (Unified - No Split) */}
+        <div 
+          onClick={() => setSelectedSchemeBreakdown("climate")}
+          className="bg-[#FFFDF8] border border-[#EDE4D6] rounded-[20px] p-4 shadow-sm hover:border-[#0F4635] cursor-pointer transition group"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-5 h-5 rounded-md bg-[#0F4635] text-[#FBF6EC] font-mono-custom font-bold text-[10px] flex items-center justify-center">
                   E
                 </span>
-                <span className="text-sm font-bold text-[#1B1815]">
+                <span className="text-sm font-bold text-[#1B1815] group-hover:text-[#0F4635] transition">
                   Climate Vouchers
+                </span>
+                <span className="text-[9px] font-mono-custom text-[#6B6259] bg-[#EDE4D6] px-1.5 py-0.5 rounded">
+                  Unified Scheme
                 </span>
               </div>
               <div className="font-display font-bold text-2xl text-[#1B1815] tracking-tight">
-                S$300<span className="text-sm font-normal text-[#8A8075]">.00 left</span>
+                S${(climateVoucher ? climateVoucher.balance : 300).toLocaleString("en-SG")}<span className="text-sm font-normal text-[#8A8075]">.00 left</span>
               </div>
               <div className="text-[11px] text-[#8A8075] mt-1">
-                Energy-efficient fridge, shower fittings, bulbs
+                Energy-efficient fridge, shower fittings, bulbs (No Category Split)
               </div>
             </div>
 
-            <span className="bg-[#DDE8E1] text-[#0F4635] font-semibold text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
-              4 months
-            </span>
+            <div className="flex flex-col items-end gap-1.5">
+              <span className="bg-[#DDE8E1] text-[#0F4635] font-semibold text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
+                4 months
+              </span>
+              <span className="text-[10px] text-[#0F4635] font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                Details <ChevronRight className="w-3 h-3" />
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* 3. SG60 Vouchers */}
-        <div className="bg-[#FFFDF8] border border-[#EDE4D6] rounded-[20px] p-4 shadow-sm">
+        {/* 3. SG60 Vouchers (Supermarket & Heartland Split) */}
+        <div 
+          onClick={() => setSelectedSchemeBreakdown("sg60")}
+          className="bg-[#FFFDF8] border border-[#EDE4D6] rounded-[20px] p-4 shadow-sm hover:border-[#E8A02C] cursor-pointer transition group"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-5 h-5 rounded-md bg-[#E8A02C] text-[#1B1815] font-mono-custom font-bold text-[9px] flex items-center justify-center">
                   60
                 </span>
-                <span className="text-sm font-bold text-[#1B1815]">
+                <span className="text-sm font-bold text-[#1B1815] group-hover:text-[#9A7420] transition">
                   SG60 Vouchers
+                </span>
+                <span className="text-[9px] font-mono-custom font-bold text-[#9A7420] bg-[#F5EAD6] px-1.5 py-0.5 rounded">
+                  2 Splits
                 </span>
               </div>
               <div className="font-display font-bold text-2xl text-[#1B1815] tracking-tight">
-                S$600<span className="text-sm font-normal text-[#8A8075]">.00 left</span>
+                S${(sg60Voucher ? sg60Voucher.balance : 600).toLocaleString("en-SG")}<span className="text-sm font-normal text-[#8A8075]">.00 left</span>
               </div>
               <div className="text-[11px] text-[#8A8075] mt-1">
-                2 adults in household • untouched
+                Supermarkets (S${((sg60Voucher ? sg60Voucher.balance : 600) / 2).toFixed(0)}) + Heartland & Clinics (S${((sg60Voucher ? sg60Voucher.balance : 600) / 2).toFixed(0)})
               </div>
             </div>
 
-            <span className="bg-[#F5EAD6] text-[#9A7420] font-semibold text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
-              Dec 2026
-            </span>
+            <div className="flex flex-col items-end gap-1.5">
+              <span className="bg-[#F5EAD6] text-[#9A7420] font-semibold text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
+                Dec 2026
+              </span>
+              <span className="text-[10px] text-[#9A7420] font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                Breakdown <ChevronRight className="w-3 h-3" />
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -228,6 +266,15 @@ export const VoucherHub: React.FC<VoucherHubProps> = ({
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onAddVoucher={onAddVoucher}
+      />
+
+      {/* Interactive Scheme Breakdown Modal */}
+      <VoucherBreakdownModal
+        isOpen={Boolean(selectedSchemeBreakdown)}
+        onClose={() => setSelectedSchemeBreakdown(null)}
+        voucherScheme={selectedSchemeBreakdown}
+        vouchers={state.vouchers}
+        onRedeem={onRedeemVoucher}
       />
     </div>
   );

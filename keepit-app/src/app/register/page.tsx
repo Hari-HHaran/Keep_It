@@ -3,7 +3,18 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, ShieldCheck, Sparkles } from "lucide-react";
+import { 
+  Check, 
+  ChevronLeft, 
+  ChevronRight, 
+  ShieldCheck, 
+  Sparkles, 
+  ExternalLink, 
+  Link2, 
+  RefreshCw, 
+  CheckCircle2, 
+  Ticket 
+} from "lucide-react";
 import { getSeedStateForPersona, saveState } from "@/lib/storage";
 import { calculateSafeWeeklySalary, getFedaPercentage } from "@/lib/calculations/gigCalculator";
 import { calculateWisEligibility } from "@/lib/calculations/wisCalculator";
@@ -17,34 +28,173 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [syncingVoucher, setSyncingVoucher] = useState<string | null>(null);
+
   const [form, setForm] = useState({
-    fullName: "Mei Ling Tan",
+    fullName: "",
     email: "",
     password: "",
-    phone: "+65 9123 4567",
-    householdName: "Tan Household",
-    age: "38",
+    phone: "",
+    householdName: "",
+    age: "25",
     citizenship: "singaporean",
-    persona: "manager" as Persona,
+    persona: "single" as Persona,
+    hasDependent: false,
+    dependentName: "Jia Le",
+    dependentAge: "11",
+    dependentBalance: "47.50",
+    dependentGoalTitle: "New game",
+    dependentGoalTarget: "60",
     bank: "DBS",
-    startingBalance: "3420",
-    includePayNow: true,
-    payNowBalance: "240",
+    startingBalance: "",
+    includePayNow: false,
+    payNowBalance: "",
     vehicleType: "motorcycle_pmd" as VehicleType,
     weeklyGross: "850",
-    claimCdc: true,
-    claimClimate: true,
-    claimSg60: true,
+    claimCdc: false,
+    cdcSmsLink: "",
+    cdcVerifiedBalance: 240,
+    cdcVerified: false,
+    claimClimate: false,
+    climateSmsLink: "",
+    climateVerifiedBalance: 300,
+    climateVerified: false,
+    claimSg60: false,
+    sg60SmsLink: "",
+    sg60VerifiedBalance: 217,
+    sg60Verified: false,
   });
 
-  const update = (field: string, value: string | boolean) =>
+  const update = (field: string, value: string | boolean | number) =>
     setForm((current) => ({ ...current, [field]: value }));
 
   const canContinue = useMemo(() => {
     if (step === 1) return Boolean(form.fullName.trim() && form.phone.trim() && form.householdName.trim());
-    if (step === 3) return Number(form.startingBalance) >= 0;
+    if (step === 3) return form.startingBalance !== "" && Number(form.startingBalance) >= 0;
     return true;
   }, [form, step]);
+
+  const handleVerifySmsLink = (scheme: "cdc" | "climate" | "sg60") => {
+    setSyncingVoucher(scheme);
+    setTimeout(() => {
+      if (scheme === "cdc") {
+        setForm((prev) => ({
+          ...prev,
+          cdcSmsLink: prev.cdcSmsLink || "https://voucher.redeem.gov.sg/c/cdc-2026-sms-synced",
+          cdcVerifiedBalance: prev.cdcVerifiedBalance || 240,
+          cdcVerified: true,
+        }));
+      } else if (scheme === "climate") {
+        setForm((prev) => ({
+          ...prev,
+          climateSmsLink: prev.climateSmsLink || "https://voucher.redeem.gov.sg/c/climate-2026-sms-synced",
+          climateVerifiedBalance: prev.climateVerifiedBalance || 300,
+          climateVerified: true,
+        }));
+      } else if (scheme === "sg60") {
+        setForm((prev) => ({
+          ...prev,
+          sg60SmsLink: prev.sg60SmsLink || "https://voucher.redeem.gov.sg/c/sg60-2026-sms-synced",
+          sg60VerifiedBalance: prev.sg60VerifiedBalance || 217,
+          sg60Verified: true,
+        }));
+      }
+      setSyncingVoucher(null);
+    }, 900);
+  };
+
+  function autofillSample(personaType: Persona) {
+    if (personaType === "single") {
+      setForm((prev) => ({
+        ...prev,
+        persona: "single",
+        fullName: "Alex",
+        email: "alex@example.com",
+        password: "password123",
+        phone: "+65 9234 5678",
+        householdName: "Alex's Place",
+        age: "26",
+        citizenship: "singaporean",
+        hasDependent: false,
+        bank: "OCBC",
+        startingBalance: "3420",
+        includePayNow: true,
+        payNowBalance: "240",
+        claimCdc: true,
+        cdcSmsLink: "https://voucher.redeem.gov.sg/c/cdc-alex-9234",
+        cdcVerifiedBalance: 240,
+        cdcVerified: true,
+        claimClimate: false,
+        claimSg60: true,
+        sg60SmsLink: "https://voucher.redeem.gov.sg/c/sg60-alex-9234",
+        sg60VerifiedBalance: 217,
+        sg60Verified: true,
+      }));
+    } else if (personaType === "gig") {
+      setForm((prev) => ({
+        ...prev,
+        persona: "gig",
+        fullName: "Marcus Lim",
+        email: "marcus@example.com",
+        password: "password123",
+        phone: "+65 9876 5432",
+        householdName: "Marcus Household",
+        age: "34",
+        citizenship: "singaporean",
+        hasDependent: false,
+        bank: "POSB",
+        startingBalance: "1850",
+        includePayNow: true,
+        payNowBalance: "450",
+        vehicleType: "motorcycle_pmd",
+        weeklyGross: "920",
+        claimCdc: true,
+        cdcSmsLink: "https://voucher.redeem.gov.sg/c/cdc-marcus-9876",
+        cdcVerifiedBalance: 300,
+        cdcVerified: true,
+        claimClimate: true,
+        climateSmsLink: "https://voucher.redeem.gov.sg/c/climate-marcus-9876",
+        climateVerifiedBalance: 300,
+        climateVerified: true,
+        claimSg60: true,
+        sg60SmsLink: "https://voucher.redeem.gov.sg/c/sg60-marcus-9876",
+        sg60VerifiedBalance: 217,
+        sg60Verified: true,
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        persona: "manager",
+        fullName: "Mei Ling Tan",
+        email: "meiling@example.com",
+        password: "password123",
+        phone: "+65 9123 4567",
+        householdName: "Tan Family",
+        age: "38",
+        citizenship: "singaporean",
+        hasDependent: true,
+        dependentName: "Jia Le",
+        dependentAge: "11",
+        dependentBalance: "47.50",
+        bank: "DBS",
+        startingBalance: "3420",
+        includePayNow: true,
+        payNowBalance: "240",
+        claimCdc: true,
+        cdcSmsLink: "https://voucher.redeem.gov.sg/c/cdc-tan-9123",
+        cdcVerifiedBalance: 240,
+        cdcVerified: true,
+        claimClimate: true,
+        climateSmsLink: "https://voucher.redeem.gov.sg/c/climate-tan-9123",
+        climateVerifiedBalance: 300,
+        climateVerified: true,
+        claimSg60: true,
+        sg60SmsLink: "https://voucher.redeem.gov.sg/c/sg60-tan-9123",
+        sg60VerifiedBalance: 217,
+        sg60Verified: true,
+      }));
+    }
+  }
 
   function buildPayload() {
     const isGig = form.persona === "gig";
@@ -53,41 +203,59 @@ export default function RegisterPage() {
     const smoothing = calculateSafeWeeklySalary([gross * 0.82, gross * 1.05, gross * 1.12, gross * 0.9, gross]);
     const wis = calculateWisEligibility(Number(form.age), gross * 4, isGig);
     const twelveDaysFromNow = new Date(Date.now() + 12 * 86_400_000).toISOString().slice(0, 10);
+    
     const vouchers = [];
     if (form.claimCdc) vouchers.push({
-      name: "CDC Supermarket Vouchers",
+      name: "CDC Supermarket & Hawker Vouchers",
       category: "CDC_Supermarket",
       totalGranted: 500,
-      balance: 240,
+      balance: Number(form.cdcVerifiedBalance || 240),
       expiryDate: twelveDaysFromNow,
-      description: "Household supermarket and heartland support",
-      acceptedMerchants: ["FairPrice", "Sheng Siong", "Giant", "Prime"],
+      description: "Gov.sg SMS Claimed • Supermarket & Heartland hawkers",
+      acceptedMerchants: ["FairPrice", "Sheng Siong", "Giant", "Prime", "Hawker Centres"],
     });
     if (form.claimClimate) vouchers.push({
       name: "Climate Vouchers",
       category: "Climate",
       totalGranted: 300,
-      balance: 300,
+      balance: Number(form.climateVerifiedBalance || 300),
       expiryDate: "2027-12-31",
-      description: "Eligible energy and water-saving products",
+      description: "Gov.sg SMS Claimed • Energy and water-saving appliances",
       acceptedMerchants: ["Courts", "Best Denki", "Gain City"],
     });
     if (form.claimSg60) vouchers.push({
       name: "SG60 Community Vouchers",
       category: "SG60",
       totalGranted: 300,
-      balance: 217,
+      balance: Number(form.sg60VerifiedBalance || 217),
       expiryDate: "2026-12-31",
-      description: "Community and heartland merchant support",
+      description: "Gov.sg SMS Claimed • Heartland shops and clinics",
       acceptedMerchants: ["Heartland Shops", "Community Clinics"],
     });
+
+    // Only add dependents if explicitly checked or configured
+    const dependents = [];
+    if (form.hasDependent && form.dependentName.trim()) {
+      dependents.push({
+        name: form.dependentName.trim(),
+        age: Number(form.dependentAge || 11),
+        personalBalance: Number(form.dependentBalance || 0),
+        savingsGoal: {
+          title: form.dependentGoalTitle || "New game",
+          targetAmount: Number(form.dependentGoalTarget || 60),
+          currentAmount: Number(form.dependentBalance || 0),
+          categoryIcon: "🎮",
+          notes: "Pocket money savings",
+        },
+      });
+    }
 
     return {
       householdName: form.householdName.trim(),
       managerProfile: {
         fullName: form.fullName.trim(),
         phoneNumber: form.phone.trim(),
-        age: Number(form.age || 21),
+        age: Number(form.age || 25),
         citizenship: form.citizenship,
         employmentType: isGig ? "platform_worker" : "regular_income",
         vehicleType: isGig ? form.vehicleType : "none",
@@ -102,30 +270,17 @@ export default function RegisterPage() {
         ...(form.includePayNow
           ? [{
               bankName: "PayNow / PayLah! Wallet",
-              accountNumber: form.phone.trim(),
+              accountNumber: form.phone.trim() || "+65 9000 0000",
               accountType: "wallet",
               balance: Number(form.payNowBalance || 0),
             }]
           : []),
       ],
       vouchers,
-      dependents: form.persona === "manager"
-        ? [{
-            name: "Jia Le",
-            age: 11,
-            personalBalance: 47.5,
-            savingsGoal: {
-              title: "New game",
-              targetAmount: 60,
-              currentAmount: 47.5,
-              categoryIcon: "🎮",
-              notes: "Learning to save from weekly pocket money",
-            },
-          }]
-        : [],
+      dependents,
       gigProfile: isGig
         ? {
-            platformName: "Lalamove",
+            platformName: "Lalamove / Grab",
             fedaPercentage: feda,
             grossWeeklyAverage: gross,
             safeWeeklySalary: smoothing.suggestedWeeklySalary,
@@ -148,12 +303,21 @@ export default function RegisterPage() {
       setStep(1);
       return;
     }
+    const isGig = form.persona === "gig";
     setSaving(true);
     try {
       const signup = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          fullName: form.fullName,
+          phoneNumber: form.phone,
+          age: form.age,
+          citizenship: form.citizenship,
+          isPlatformWorker: isGig,
+        }),
       });
       const signupBody = await signup.json();
       if (!signup.ok) throw new Error(signupBody.error || "Unable to create account.");
@@ -182,72 +346,195 @@ export default function RegisterPage() {
   }
 
   function launchDemo() {
-    const seedId = form.persona === "gig" ? "marcus_gig" : form.persona === "single" ? "alex_young_adult" : "tan_family";
+    const payload = buildPayload();
+    const isGig = form.persona === "gig";
+    const seedId = isGig ? "marcus_gig" : form.persona === "single" ? "alex_young_adult" : "tan_family";
     const state = getSeedStateForPersona(seedId);
-    state.householdName = form.householdName || state.householdName;
+    
+    // Override state with user's actual entered data
+    state.householdName = payload.householdName || "My Household";
     state.backendMode = "demo";
+    state.bankAccounts = payload.accounts.map((acc, idx) => ({
+      id: `acc-custom-${idx}`,
+      bankName: acc.bankName,
+      accountNumber: acc.accountNumber,
+      accountType: acc.accountType as any,
+      balance: acc.balance,
+      lastSynced: "Just now",
+    }));
+    state.totalHouseholdBalance = payload.accounts.reduce((s, a) => s + a.balance, 0);
+    state.members = [
+      {
+        id: "mem-self",
+        name: payload.managerProfile.fullName || "User",
+        role: "manager",
+        age: payload.managerProfile.age,
+        workerType: payload.managerProfile.employmentType as any,
+        vehicleType: payload.managerProfile.vehicleType as any,
+        personalBalance: state.totalHouseholdBalance,
+        avatarText: (payload.managerProfile.fullName || "U").slice(0, 1).toUpperCase(),
+      },
+      ...payload.dependents.map((dep, idx) => ({
+        id: `dep-custom-${idx}`,
+        name: dep.name,
+        role: "dependent" as const,
+        age: dep.age,
+        personalBalance: dep.personalBalance,
+        avatarText: dep.name.slice(0, 1).toUpperCase(),
+        savingsGoal: {
+          id: `goal-custom-${idx}`,
+          title: dep.savingsGoal.title,
+          targetAmount: dep.savingsGoal.targetAmount,
+          currentAmount: dep.savingsGoal.currentAmount,
+          categoryIcon: dep.savingsGoal.categoryIcon,
+        },
+      })),
+    ];
+    
+    if (payload.vouchers.length) {
+      state.vouchers = payload.vouchers.map((v, idx) => ({
+        id: `v-custom-${idx}`,
+        name: v.name,
+        category: v.category as any,
+        totalGranted: v.totalGranted,
+        balance: v.balance,
+        expiryDate: v.expiryDate,
+        daysRemaining: 12,
+        description: v.description,
+        acceptedMerchants: v.acceptedMerchants,
+        isExpiringSoon: true,
+      }));
+    }
+
     saveState(state);
     localStorage.setItem("keepit_demo_mode", "true");
+    document.cookie = "keepit_demo_mode=true; path=/; max-age=86400; SameSite=Lax";
     router.push("/");
   }
 
   return (
-    <main className="min-h-screen bg-[#EDE4D6] px-4 py-8 text-[#1B1815]">
+    <main className="min-h-screen bg-[#EDE4D6] px-4 py-8 text-[#1B1815] font-sans">
       <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-[32px] border border-[#D6C9B4] bg-[#FFFDF8] shadow-xl">
+        {/* Header */}
         <div className="bg-[#0F4635] p-6 text-[#FBF6EC]">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-black">KeepIt</div>
-              <p className="mt-1 text-xs text-[#BBD0C6]">Create one household view for money, schemes and irregular income.</p>
+              <div className="text-2xl font-black font-display">KeepIt</div>
+              <p className="mt-1 text-xs text-[#DDE8E1]">Create your personalized household ledger.</p>
             </div>
-            <span className="rounded-full bg-[#E8A02C] px-3 py-1 text-xs font-bold text-[#1B1815]">{step} / 4</span>
+            <div className="rounded-full bg-[#E8A02C] px-3 py-1 font-mono-custom text-xs font-bold text-[#1B1815]">
+              {step} / 4
+            </div>
           </div>
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-[#1B5A47]">
-            <div className="h-full rounded-full bg-[#E8A02C] transition-all" style={{ width: `${step * 25}%` }} />
+          <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[#0A3227]">
+            <div className="h-full bg-[#E8A02C] transition-all" style={{ width: `${(step / 4) * 100}%` }} />
           </div>
         </div>
 
+        {/* Form Body */}
         <div className="p-6 sm:p-8">
+          {/* Persona Autofill Quick Pills */}
+          <div className="mb-6 pb-4 border-b border-[#EDE4D6] flex items-center justify-between flex-wrap gap-2">
+            <span className="text-xs text-[#8A8075] font-semibold">Quick Sample Autofill:</span>
+            <div className="flex gap-1.5">
+              <button 
+                type="button" 
+                onClick={() => autofillSample("single")} 
+                className="px-2.5 py-1 rounded-lg bg-[#EDE4D6] hover:bg-[#D6C9B4] text-[11px] font-bold text-[#1B1815] transition"
+              >
+                Single Young Adult
+              </button>
+              <button 
+                type="button" 
+                onClick={() => autofillSample("gig")} 
+                className="px-2.5 py-1 rounded-lg bg-[#EDE4D6] hover:bg-[#D6C9B4] text-[11px] font-bold text-[#1B1815] transition"
+              >
+                Platform Worker
+              </button>
+              <button 
+                type="button" 
+                onClick={() => autofillSample("manager")} 
+                className="px-2.5 py-1 rounded-lg bg-[#EDE4D6] hover:bg-[#D6C9B4] text-[11px] font-bold text-[#1B1815] transition"
+              >
+                Family Household
+              </button>
+            </div>
+          </div>
+
           {step === 1 && (
             <section className="space-y-4">
-              <StepHeading title="Tell us about you" detail="These details create your secure household profile." />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Full name" value={form.fullName} onChange={(v) => update("fullName", v)} />
-                <Field label="Household name" value={form.householdName} onChange={(v) => update("householdName", v)} />
-                <Field label="Email" type="email" value={form.email} onChange={(v) => update("email", v)} placeholder="you@example.com" />
-                <Field label="Password" type="password" value={form.password} onChange={(v) => update("password", v)} placeholder="At least 8 characters" />
-                <Field label="Mobile number" value={form.phone} onChange={(v) => update("phone", v)} />
-                <Field label="Age" type="number" value={form.age} onChange={(v) => update("age", v)} />
+              <StepHeading title="Create your profile" detail="Enter your name, Singpass phone number and household account credentials." />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Full Name" placeholder="e.g. Alex Tan" value={form.fullName} onChange={(v) => update("fullName", v)} required />
+                <Field label="Phone number" placeholder="+65 9123 4567" value={form.phone} onChange={(v) => update("phone", v)} required />
+              </div>
+              <Field label="Household Display Name" placeholder="e.g. Alex's Place" value={form.householdName} onChange={(v) => update("householdName", v)} required />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Email" type="email" placeholder="name@example.com" value={form.email} onChange={(v) => update("email", v)} required />
+                <Field label="Password (min 8 characters)" type="password" placeholder="••••••••" value={form.password} onChange={(v) => update("password", v)} required />
               </div>
             </section>
           )}
 
           {step === 2 && (
             <section className="space-y-4">
-              <StepHeading title="Choose your financial situation" detail="KeepIt adapts the dashboard and calculations to you." />
-              <div className="grid gap-3">
+              <StepHeading title="Choose your profile type" detail="Tailors statutory Platform Workers Act 2025 calculations and household oversight." />
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {[
-                  ["manager", "👨‍👩‍👧 Household manager", "Shared ledger, dependents and household schemes"],
-                  ["gig", "🛵 Platform worker", "FEDA, CPF, income smoothing and Workfare tracking"],
-                  ["single", "👤 Young adult", "Personal ledger, first-job savings and scheme pacing"],
-                ].map(([value, title, detail]) => (
-                  <button key={value} type="button" onClick={() => update("persona", value)} className={`rounded-2xl border p-4 text-left transition ${form.persona === value ? "border-[#0F4635] bg-[#DDE8E1] ring-1 ring-[#0F4635]" : "border-[#E0D4BF] bg-white hover:border-[#0F4635]"}`}>
-                    <div className="flex items-center justify-between">
-                      <div><div className="font-bold">{title}</div><div className="mt-1 text-xs text-[#6B6259]">{detail}</div></div>
-                      {form.persona === value && <Check className="h-5 w-5 text-[#0F4635]" />}
-                    </div>
+                  ["single", "Single Earner", "Young Adult"],
+                  ["gig", "Platform Worker", "FEDA & WIS"],
+                  ["manager", "Family Manager", "Multi-Member"],
+                ].map(([id, title, detail]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => update("persona", id)}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      form.persona === id ? "border-[#0F4635] bg-[#DDE8E1] text-[#0F4635] shadow-xs" : "border-[#E0D4BF] bg-[#FFFDF8] hover:bg-[#F5F1E7]"
+                    }`}
+                  >
+                    <div className="text-xs font-bold font-display">{title}</div>
+                    <div className="text-[10px] text-[#6B6259] mt-0.5">{detail}</div>
                   </button>
                 ))}
               </div>
+
               {form.persona === "gig" && (
-                <div className="rounded-2xl bg-[#F5EAD6] p-4">
-                  <label className="text-xs font-bold">Delivery mode</label>
-                  <select value={form.vehicleType} onChange={(e) => update("vehicleType", e.target.value)} className="mt-2 w-full rounded-xl border border-[#D6C9B4] bg-white p-3 text-sm">
-                    <option value="motorcycle_pmd">Motorcycle / PMD — 35% FEDA</option>
-                    <option value="car_van_lorry">Car / van / lorry — 60% FEDA</option>
-                    <option value="bicycle_walking_public">Bicycle / walking / public transport — 20% FEDA</option>
-                  </select>
-                  <div className="mt-3"><Field label="Estimated weekly gross income" type="number" value={form.weeklyGross} onChange={(v) => update("weeklyGross", v)} /></div>
+                <div className="rounded-2xl border border-[#D6C9B4] bg-[#FBF6EC] p-4 space-y-3 animate-fadeIn">
+                  <div className="text-xs font-bold text-[#0F4635]">Platform Worker 2025 Setup</div>
+                  <label className="block text-xs font-semibold">
+                    Delivery / Ride Vehicle Type
+                    <select
+                      value={form.vehicleType}
+                      onChange={(e) => update("vehicleType", e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-[#D6C9B4] bg-white p-2.5 text-xs outline-none focus:border-[#0F4635]"
+                    >
+                      <option value="car_van_lorry">Car / Van / Lorry (60% FEDA deduction)</option>
+                      <option value="motorcycle_pmd">Motorcycle / PMD (35% FEDA deduction)</option>
+                      <option value="bicycle_walking_public">Bicycle / Walking (20% FEDA deduction)</option>
+                    </select>
+                  </label>
+                  <Field label="Estimated weekly gross income (S$)" type="number" placeholder="850" value={form.weeklyGross} onChange={(v) => update("weeklyGross", v)} />
+                </div>
+              )}
+
+              {form.persona === "manager" && (
+                <div className="rounded-2xl border border-[#D6C9B4] bg-[#FBF6EC] p-4 space-y-3 animate-fadeIn">
+                  <label className="flex items-center justify-between text-xs font-bold text-[#0F4635] cursor-pointer">
+                    <span>Include dependent child (e.g. Jia Le)</span>
+                    <input 
+                      type="checkbox" 
+                      checked={form.hasDependent} 
+                      onChange={(e) => update("hasDependent", e.target.checked)} 
+                      className="h-4 w-4 accent-[#0F4635]"
+                    />
+                  </label>
+                  {form.hasDependent && (
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#EDE4D6]">
+                      <Field label="Dependent Name" value={form.dependentName} onChange={(v) => update("dependentName", v)} />
+                      <Field label="Starting Allowance (S$)" type="number" value={form.dependentBalance} onChange={(v) => update("dependentBalance", v)} />
+                    </div>
+                  )}
                 </div>
               )}
             </section>
@@ -255,52 +542,294 @@ export default function RegisterPage() {
 
           {step === 3 && (
             <section className="space-y-4">
-              <StepHeading title="Add money sources" detail="Bank linking is simulated for the hackathon; balances are stored securely in Supabase." />
+              <StepHeading title="Add money sources" detail="Connect your primary bank account and optional digital wallets." />
+              <div className="text-xs font-bold text-[#1B1815]">Select Primary Bank (SGFinDex)</div>
               <div className="grid grid-cols-4 gap-2">
                 {["DBS", "OCBC", "UOB", "POSB"].map((bank) => (
-                  <button key={bank} type="button" onClick={() => update("bank", bank)} className={`rounded-xl border p-3 text-xs font-bold ${form.bank === bank ? "border-[#0F4635] bg-[#0F4635] text-white" : "border-[#E0D4BF]"}`}>{bank}</button>
+                  <button 
+                    key={bank} 
+                    type="button" 
+                    onClick={() => update("bank", bank)} 
+                    className={`rounded-xl border p-3 text-xs font-bold transition ${
+                      form.bank === bank ? "border-[#0F4635] bg-[#0F4635] text-white" : "border-[#E0D4BF] hover:bg-[#F5F1E7]"
+                    }`}
+                  >
+                    {bank}
+                  </button>
                 ))}
               </div>
-              <Field label="Starting bank balance (S$)" type="number" value={form.startingBalance} onChange={(v) => update("startingBalance", v)} />
-              <label className="flex items-center justify-between rounded-2xl border border-[#E0D4BF] bg-[#FBF6EC] p-4 text-sm font-semibold">
-                Include PayNow / PayLah! wallet
+              <Field label="Starting bank balance (S$)" type="number" placeholder="e.g. 3420" value={form.startingBalance} onChange={(v) => update("startingBalance", v)} required />
+              
+              <label className="flex items-center justify-between rounded-2xl border border-[#E0D4BF] bg-[#FBF6EC] p-4 text-sm font-semibold cursor-pointer">
+                <span>Include PayNow / PayLah! wallet</span>
                 <input type="checkbox" checked={form.includePayNow} onChange={(e) => update("includePayNow", e.target.checked)} className="h-4 w-4 accent-[#0F4635]" />
               </label>
-              {form.includePayNow && <Field label="Wallet balance (S$)" type="number" value={form.payNowBalance} onChange={(v) => update("payNowBalance", v)} />}
+              {form.includePayNow && <Field label="Wallet balance (S$)" type="number" placeholder="e.g. 240" value={form.payNowBalance} onChange={(v) => update("payNowBalance", v)} />}
             </section>
           )}
 
           {step === 4 && (
             <section className="space-y-4">
-              <StepHeading title="Add eligible support" detail="For the prototype, choose the schemes to demonstrate in your unified dashboard." />
-              {[
-                ["claimCdc", form.claimCdc, "CDC Vouchers", "S$240 unspent • supermarkets and hawkers"],
-                ["claimClimate", form.claimClimate, "Climate Vouchers", "S$300 • efficient appliances and fittings"],
-                ["claimSg60", form.claimSg60, "SG60 Community Vouchers", "S$217 unspent • heartland merchants"],
-              ].map(([key, checked, title, detail]) => (
-                <label key={String(key)} className="flex items-center justify-between rounded-2xl border border-[#E0D4BF] bg-[#FBF6EC] p-4">
-                  <div><div className="text-sm font-bold">{title}</div><div className="text-xs text-[#6B6259]">{detail}</div></div>
-                  <input type="checkbox" checked={Boolean(checked)} onChange={(e) => update(String(key), e.target.checked)} className="h-4 w-4 accent-[#0F4635]" />
+              <StepHeading 
+                title="Add & Sync Government Vouchers" 
+                detail="Follow the Gov.sg RedeemSG workflow to link and automatically sync your live unspent voucher balances." 
+              />
+
+              {/* 1. CDC Vouchers */}
+              <div className={`rounded-2xl border transition p-4 space-y-3 ${form.claimCdc ? "border-[#0F4635] bg-[#FFFDF8] shadow-xs" : "border-[#E0D4BF] bg-[#FBF6EC]"}`}>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#0F4635] text-[#FBF6EC] flex items-center justify-center font-bold text-xs">
+                      CDC
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-[#1B1815]">CDC Vouchers 2026</div>
+                      <div className="text-xs text-[#6B6259]">Supermarket (S$250) + Heartland Hawkers (S$250)</div>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={form.claimCdc} 
+                    onChange={(e) => update("claimCdc", e.target.checked)} 
+                    className="h-4 w-4 accent-[#0F4635]" 
+                  />
                 </label>
-              ))}
+
+                {form.claimCdc && (
+                  <div className="pt-3 border-t border-[#EDE4D6] space-y-2.5 text-xs animate-fadeIn">
+                    <div className="flex items-center justify-between text-[#0F4635] font-semibold">
+                      <span>Step 1: Get official Gov.sg SMS</span>
+                      <a 
+                        href="https://vouchers.cdc.gov.sg" 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="inline-flex items-center gap-1 text-[11px] underline hover:text-[#0A3227]"
+                      >
+                        Claim on go.gov.sg/cdc <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold text-[#1B1815]">Step 2: Paste Gov.sg SMS Claim Link</span>
+                      <div className="mt-1 flex gap-2">
+                        <input
+                          type="url"
+                          placeholder="https://voucher.redeem.gov.sg/claim/cdc-xxxx"
+                          value={form.cdcSmsLink}
+                          onChange={(e) => update("cdcSmsLink", e.target.value)}
+                          className="flex-1 rounded-xl border border-[#D6C9B4] bg-white p-2 text-xs outline-none focus:border-[#0F4635]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleVerifySmsLink("cdc")}
+                          disabled={syncingVoucher === "cdc"}
+                          className="px-3 py-2 rounded-xl bg-[#0F4635] text-[#FBF6EC] font-bold text-xs flex items-center gap-1 shrink-0 hover:bg-[#0A3227] disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingVoucher === "cdc" ? "animate-spin" : ""}`} />
+                          <span>{form.cdcVerified ? "Re-sync" : "Verify & Sync"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {form.cdcVerified && (
+                      <div className="p-2.5 rounded-xl bg-[#DDE8E1] text-[#0F4635] flex items-center justify-between font-semibold animate-fadeIn">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-[#0F4635]" /> RedeemSG Balance Synced:
+                        </span>
+                        <span className="font-display font-black text-sm">S${form.cdcVerifiedBalance}.00</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Climate Vouchers */}
+              <div className={`rounded-2xl border transition p-4 space-y-3 ${form.claimClimate ? "border-[#0F4635] bg-[#FFFDF8] shadow-xs" : "border-[#E0D4BF] bg-[#FBF6EC]"}`}>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#0F4635] text-[#FBF6EC] flex items-center justify-center font-bold text-xs">
+                      CFH
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-[#1B1815]">Climate Vouchers (S$300)</div>
+                      <div className="text-xs text-[#6B6259]">Energy & water-saving appliances (Courts, Best Denki, Gain City)</div>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={form.claimClimate} 
+                    onChange={(e) => update("claimClimate", e.target.checked)} 
+                    className="h-4 w-4 accent-[#0F4635]" 
+                  />
+                </label>
+
+                {form.claimClimate && (
+                  <div className="pt-3 border-t border-[#EDE4D6] space-y-2.5 text-xs animate-fadeIn">
+                    <div className="flex items-center justify-between text-[#0F4635] font-semibold">
+                      <span>Step 1: Get official Gov.sg SMS</span>
+                      <a 
+                        href="https://climate-friendly-households.gov.sg" 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="inline-flex items-center gap-1 text-[11px] underline hover:text-[#0A3227]"
+                      >
+                        Claim on go.gov.sg/climate <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold text-[#1B1815]">Step 2: Paste Gov.sg SMS Claim Link</span>
+                      <div className="mt-1 flex gap-2">
+                        <input
+                          type="url"
+                          placeholder="https://voucher.redeem.gov.sg/claim/climate-xxxx"
+                          value={form.climateSmsLink}
+                          onChange={(e) => update("climateSmsLink", e.target.value)}
+                          className="flex-1 rounded-xl border border-[#D6C9B4] bg-white p-2 text-xs outline-none focus:border-[#0F4635]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleVerifySmsLink("climate")}
+                          disabled={syncingVoucher === "climate"}
+                          className="px-3 py-2 rounded-xl bg-[#0F4635] text-[#FBF6EC] font-bold text-xs flex items-center gap-1 shrink-0 hover:bg-[#0A3227] disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingVoucher === "climate" ? "animate-spin" : ""}`} />
+                          <span>{form.climateVerified ? "Re-sync" : "Verify & Sync"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {form.climateVerified && (
+                      <div className="p-2.5 rounded-xl bg-[#DDE8E1] text-[#0F4635] flex items-center justify-between font-semibold animate-fadeIn">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-[#0F4635]" /> RedeemSG Balance Synced:
+                        </span>
+                        <span className="font-display font-black text-sm">S${form.climateVerifiedBalance}.00</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. SG60 Community Vouchers */}
+              <div className={`rounded-2xl border transition p-4 space-y-3 ${form.claimSg60 ? "border-[#0F4635] bg-[#FFFDF8] shadow-xs" : "border-[#E0D4BF] bg-[#FBF6EC]"}`}>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#0F4635] text-[#FBF6EC] flex items-center justify-center font-bold text-xs">
+                      SG60
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-[#1B1815]">SG60 Community Vouchers (S$300)</div>
+                      <div className="text-xs text-[#6B6259]">Heartland merchants, traditional coffee shops & clinics</div>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={form.claimSg60} 
+                    onChange={(e) => update("claimSg60", e.target.checked)} 
+                    className="h-4 w-4 accent-[#0F4635]" 
+                  />
+                </label>
+
+                {form.claimSg60 && (
+                  <div className="pt-3 border-t border-[#EDE4D6] space-y-2.5 text-xs animate-fadeIn">
+                    <div className="flex items-center justify-between text-[#0F4635] font-semibold">
+                      <span>Step 1: Get official Gov.sg SMS</span>
+                      <a 
+                        href="https://gov.sg" 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="inline-flex items-center gap-1 text-[11px] underline hover:text-[#0A3227]"
+                      >
+                        Claim on go.gov.sg/sg60 <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold text-[#1B1815]">Step 2: Paste Gov.sg SMS Claim Link</span>
+                      <div className="mt-1 flex gap-2">
+                        <input
+                          type="url"
+                          placeholder="https://voucher.redeem.gov.sg/claim/sg60-xxxx"
+                          value={form.sg60SmsLink}
+                          onChange={(e) => update("sg60SmsLink", e.target.value)}
+                          className="flex-1 rounded-xl border border-[#D6C9B4] bg-white p-2 text-xs outline-none focus:border-[#0F4635]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleVerifySmsLink("sg60")}
+                          disabled={syncingVoucher === "sg60"}
+                          className="px-3 py-2 rounded-xl bg-[#0F4635] text-[#FBF6EC] font-bold text-xs flex items-center gap-1 shrink-0 hover:bg-[#0A3227] disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingVoucher === "sg60" ? "animate-spin" : ""}`} />
+                          <span>{form.sg60Verified ? "Re-sync" : "Verify & Sync"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {form.sg60Verified && (
+                      <div className="p-2.5 rounded-xl bg-[#DDE8E1] text-[#0F4635] flex items-center justify-between font-semibold animate-fadeIn">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-[#0F4635]" /> RedeemSG Balance Synced:
+                        </span>
+                        <span className="font-display font-black text-sm">S${form.sg60VerifiedBalance}.00</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-2xl bg-[#DDE8E1] p-4 text-xs text-[#0F4635]">
-                <ShieldCheck className="mr-1 inline h-4 w-4" /> Real mode stores this household in Supabase. Demo mode stays in this browser as a presentation backup.
+                <ShieldCheck className="mr-1 inline h-4 w-4" /> Live mode connects to Supabase database. Demo fallback runs instantly in this browser.
               </div>
             </section>
           )}
 
-          {(error || message) && <div className={`mt-5 rounded-xl p-3 text-sm ${error ? "bg-[#FAE3DD] text-[#8F2A17]" : "bg-[#DDE8E1] text-[#0F4635]"}`}>{error || message}</div>}
+          {(error || message) && (
+            <div className={`mt-5 rounded-xl p-3 text-sm ${error ? "bg-[#FAE3DD] text-[#8F2A17]" : "bg-[#DDE8E1] text-[#0F4635]"}`}>
+              {error || message}
+            </div>
+          )}
 
           <div className="mt-7 flex items-center justify-between gap-3">
             {step > 1 ? (
-              <button type="button" onClick={() => setStep((value) => value - 1)} className="flex items-center gap-1 rounded-xl border border-[#D6C9B4] px-4 py-3 text-xs font-bold"><ChevronLeft className="h-4 w-4" /> Back</button>
-            ) : <Link href="/login" className="text-xs font-bold text-[#0F4635] underline">Already registered?</Link>}
+              <button 
+                type="button" 
+                onClick={() => setStep((value) => value - 1)} 
+                className="flex items-center gap-1 rounded-xl border border-[#D6C9B4] px-4 py-3 text-xs font-bold hover:bg-[#F5F1E7] transition"
+              >
+                <ChevronLeft className="h-4 w-4" /> Back
+              </button>
+            ) : (
+              <Link href="/login" className="text-xs font-bold text-[#0F4635] underline">Already registered?</Link>
+            )}
+
             {step < 4 ? (
-              <button type="button" disabled={!canContinue} onClick={() => setStep((value) => value + 1)} className="ml-auto flex items-center gap-1 rounded-xl bg-[#0F4635] px-5 py-3 text-xs font-bold text-white disabled:opacity-40">Continue <ChevronRight className="h-4 w-4" /></button>
+              <button 
+                type="button" 
+                disabled={!canContinue} 
+                onClick={() => setStep((value) => value + 1)} 
+                className="ml-auto flex items-center gap-1 rounded-xl bg-[#0F4635] px-5 py-3 text-xs font-bold text-white disabled:opacity-40 hover:bg-[#0A3227] transition"
+              >
+                Continue <ChevronRight className="h-4 w-4" />
+              </button>
             ) : (
               <div className="ml-auto flex gap-2">
-                <button type="button" onClick={launchDemo} className="rounded-xl border border-[#0F4635] px-4 py-3 text-xs font-bold text-[#0F4635]"><Sparkles className="mr-1 inline h-4 w-4" /> Demo fallback</button>
-                <button type="button" disabled={saving} onClick={registerWithBackend} className="rounded-xl bg-[#0F4635] px-5 py-3 text-xs font-bold text-white disabled:opacity-50">{saving ? "Creating…" : "Create household"}</button>
+                <button 
+                  type="button" 
+                  onClick={launchDemo} 
+                  className="rounded-xl border border-[#0F4635] px-4 py-3 text-xs font-bold text-[#0F4635] hover:bg-[#DDE8E1] transition"
+                >
+                  <Sparkles className="mr-1 inline h-4 w-4" /> Demo fallback
+                </button>
+                <button 
+                  type="button" 
+                  disabled={saving} 
+                  onClick={registerWithBackend} 
+                  className="rounded-xl bg-[#0F4635] px-5 py-3 text-xs font-bold text-white disabled:opacity-50 hover:bg-[#0A3227] transition"
+                >
+                  {saving ? "Creating…" : "Create household"}
+                </button>
               </div>
             )}
           </div>
@@ -311,9 +840,40 @@ export default function RegisterPage() {
 }
 
 function StepHeading({ title, detail }: { title: string; detail: string }) {
-  return <div><h1 className="text-xl font-black">{title}</h1><p className="mt-1 text-sm text-[#6B6259]">{detail}</p></div>;
+  return (
+    <div className="mb-4">
+      <h2 className="text-lg font-bold font-display text-[#1B1815]">{title}</h2>
+      <p className="mt-1 text-xs text-[#6B6259]">{detail}</p>
+    </div>
+  );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) {
-  return <label className="block text-xs font-bold text-[#584F45]">{label}<input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="mt-1.5 w-full rounded-xl border border-[#D6C9B4] bg-white px-3.5 py-3 text-sm text-[#1B1815] outline-none focus:border-[#0F4635]" /></label>;
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block text-xs font-bold text-[#1B1815]">
+      {label}
+      <input
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full rounded-xl border border-[#D6C9B4] bg-white p-3 text-sm font-normal text-[#1B1815] outline-none transition focus:border-[#0F4635]"
+      />
+    </label>
+  );
 }

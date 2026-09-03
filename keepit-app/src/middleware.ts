@@ -45,8 +45,15 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
+<<<<<<< Updated upstream
 
   if ((!user || authCheckFailed) && !isPublic) {
+=======
+  const hasDemoCookie = request.cookies.get("keepit_demo_mode")?.value === "true";
+  const isDemoEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
+
+  if ((!user || authCheckFailed) && !isPublic && !hasDemoCookie && !isDemoEnabled) {
+>>>>>>> Stashed changes
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/login";
     return NextResponse.redirect(redirect);

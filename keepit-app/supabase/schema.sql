@@ -18,11 +18,11 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  full_name text not null,
-  phone_number text not null,
+  full_name text not null default 'Household Member',
+  phone_number text default '',
   email text,
-  age integer not null check (age between 0 and 120),
-  citizenship text not null check (citizenship in ('singaporean', 'pr')),
+  age integer default 35 check (age between 0 and 120),
+  citizenship text default 'singaporean' check (citizenship in ('singaporean', 'pr')),
   employment_type text check (employment_type in ('regular_income', 'platform_worker', 'variable_income', 'not_applicable')),
   is_platform_worker boolean not null default false,
   created_at timestamptz not null default now(),
@@ -198,6 +198,45 @@ drop trigger if exists vouchers_set_updated_at on public.government_vouchers;
 create trigger vouchers_set_updated_at before update on public.government_vouchers for each row execute function public.set_updated_at();
 drop trigger if exists gig_profiles_set_updated_at on public.gig_profiles;
 create trigger gig_profiles_set_updated_at before update on public.gig_profiles for each row execute function public.set_updated_at();
+
+-- Automatic profile sync from auth.users (safe against null constraints)
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (
+    id,
+    full_name,
+    phone_number,
+    email,
+    age,
+    citizenship,
+    employment_type,
+    is_platform_worker
+  ) values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1), 'Household Member'),
+    coalesce(new.raw_user_meta_data->>'phone_number', '+65 9000 0000'),
+    new.email,
+    coalesce((new.raw_user_meta_data->>'age')::integer, 35),
+    coalesce(new.raw_user_meta_data->>'citizenship', 'singaporean'),
+    coalesce(new.raw_user_meta_data->>'employment_type', 'regular_income'),
+    coalesce((new.raw_user_meta_data->>'is_platform_worker')::boolean, false)
+  )
+  on conflict (id) do update set
+    full_name = coalesce(excluded.full_name, profiles.full_name),
+    email = coalesce(excluded.email, profiles.email),
+    updated_at = now();
+  return new;
+exception when others then
+  -- Fail-open so auth sign-up is never blocked
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
 
 -- Security-definer helpers avoid recursive RLS checks on household_members.
 create or replace function public.is_household_member(target_household uuid)

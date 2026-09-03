@@ -31,15 +31,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This user already belongs to a household." }, { status: 409 });
     }
 
+    const citizenship = manager.citizenship === "pr" ? "pr" : "singaporean";
+    const employmentType = ["regular_income", "platform_worker", "variable_income", "not_applicable"].includes(manager.employmentType)
+      ? manager.employmentType
+      : "regular_income";
+    const vehicleType = ["car_van_lorry", "motorcycle_pmd", "bicycle_walking_public", "none"].includes(manager.vehicleType)
+      ? manager.vehicleType
+      : "none";
+
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
       full_name: manager.fullName,
-      phone_number: manager.phoneNumber,
+      phone_number: manager.phoneNumber || "",
       email: user.email,
-      age: Number(manager.age || 21),
-      citizenship: manager.citizenship || "singaporean",
-      employment_type: manager.employmentType || "regular_income",
-      is_platform_worker: manager.employmentType === "platform_worker",
+      age: Math.max(0, Math.min(120, Number(manager.age) || 35)),
+      citizenship,
+      employment_type: employmentType,
+      is_platform_worker: employmentType === "platform_worker",
       updated_at: new Date().toISOString(),
     });
     if (profileError) throw profileError;
@@ -58,13 +66,13 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         full_name: manager.fullName,
         role: "manager",
-        phone_number: manager.phoneNumber,
+        phone_number: manager.phoneNumber || "",
         email: user.email,
-        age: Number(manager.age || 21),
-        citizenship: manager.citizenship || "singaporean",
-        employment_type: manager.employmentType || "regular_income",
-        is_platform_worker: manager.employmentType === "platform_worker",
-        vehicle_type: manager.vehicleType || "none",
+        age: Math.max(0, Math.min(120, Number(manager.age) || 35)),
+        citizenship,
+        employment_type: employmentType,
+        is_platform_worker: employmentType === "platform_worker",
+        vehicle_type: vehicleType,
       })
       .select()
       .single();

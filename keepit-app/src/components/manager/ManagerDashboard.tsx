@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { AppState, GovernmentVoucher, LocationMerchant, Transaction } from "@/lib/types";
+import { AppState, BankAccount, GovernmentVoucher, HouseholdMember, LocationMerchant, SavingsGoal, Transaction } from "@/lib/types";
 import { AccountSummaryCard } from "./AccountSummaryCard";
 import { LinkedAccountsList } from "./LinkedAccountsList";
 import { HouseholdMembersList } from "./HouseholdMembersList";
 import { RecentTransactions } from "./RecentTransactions";
+import { AccountDetailModal } from "./AccountDetailModal";
+import { AddDependentModal } from "./AddDependentModal";
 import { VoucherHub } from "../vouchers/VoucherHub";
 import { VoucherMapScreen } from "../map/VoucherMapScreen";
 import { GigResilienceCard } from "../gig/GigResilienceCard";
@@ -30,6 +32,11 @@ interface ManagerDashboardProps {
   onRedeemVoucher?: (voucherId: string, amount: number) => Promise<void> | void;
   /** Persists a newly claimed voucher via /api/vouchers. */
   onAddVoucher?: (voucher: GovernmentVoucher) => Promise<void> | void;
+<<<<<<< Updated upstream
+=======
+  /** Persists a new dependent member. */
+  onAddDependent?: (dependent: Omit<HouseholdMember, "id">, goal?: Omit<SavingsGoal, "id">) => Promise<void> | void;
+>>>>>>> Stashed changes
   isOcrOpen: boolean;
   setIsOcrOpen: (open: boolean) => void;
 }
@@ -44,10 +51,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onCreateTransaction,
   onRedeemVoucher,
   onAddVoucher,
+<<<<<<< Updated upstream
+=======
+  onAddDependent: propOnAddDependent,
+>>>>>>> Stashed changes
   isOcrOpen,
   setIsOcrOpen,
 }) => {
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [isAddDependentOpen, setIsAddDependentOpen] = useState(false);
+  const [selectedAccountForDetail, setSelectedAccountForDetail] = useState<BankAccount | null>(null);
 
   // Persistent Nudge Dismissal across component unmounts and navigations
   const dismissedIds = state.dismissedNudgeIds || [];
@@ -110,6 +123,34 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     onUpdateState(nextState);
   };
 
+  const handleAddDependent = async (
+    dependent: Omit<HouseholdMember, "id">,
+    goal?: Omit<SavingsGoal, "id">
+  ) => {
+    if (propOnAddDependent) {
+      await propOnAddDependent(dependent, goal);
+      return;
+    }
+
+    const newDepId = `dep-${Date.now()}`;
+    const newMember: HouseholdMember = {
+      ...dependent,
+      id: newDepId,
+      savingsGoal: goal
+        ? {
+            ...goal,
+            id: `goal-${Date.now()}`,
+          }
+        : undefined,
+    };
+
+    const nextState: AppState = {
+      ...state,
+      members: [...state.members, newMember],
+    };
+    onUpdateState(nextState);
+  };
+
   const handleSendPocketMoney = (dependentId: string, amount: number) => {
     const tx: Omit<Transaction, "id"> = {
       date: "Just now",
@@ -118,7 +159,11 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       category: "Pocket Money",
       source: "PayNow",
       recipientId: dependentId,
+<<<<<<< Updated upstream
       memberId: state.members[0]?.id || state.members[0]?.id || "",
+=======
+      memberId: state.members[0]?.id || "",
+>>>>>>> Stashed changes
     };
 
     if (onCreateTransaction) {
@@ -146,7 +191,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       {/* 1. Home Tab: Complete Vessel Dashboard */}
       {activeTab === "home" && (
         <>
-          {/* Literacy Opportunity Cost Alert (Hidden once dismissed on Home, flagged under Schemes) */}
+          {/* Literacy Opportunity Cost Alert */}
           {activeNudge && (
             <OpportunityCostBanner
               nudge={activeNudge}
@@ -168,6 +213,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             state={state}
             onOpenAddTransaction={() => setIsAddTxOpen(true)}
             onOpenReceiptOcr={() => setIsOcrOpen(true)}
+            onSelectAccount={setSelectedAccountForDetail}
           />
 
           {isMarcusGigPersona && (
@@ -181,6 +227,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             state={state}
             onSendPocketMoney={handleSendPocketMoney}
             onViewDependent={onViewDependent}
+            onOpenAddDependent={() => setIsAddDependentOpen(true)}
           />
 
           <RecentTransactions
@@ -204,6 +251,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             state={state}
             onOpenAddTransaction={() => setIsAddTxOpen(true)}
             onOpenReceiptOcr={() => setIsOcrOpen(true)}
+            onSelectAccount={setSelectedAccountForDetail}
           />
         </div>
       )}
@@ -224,6 +272,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
           state={state}
           onSendPocketMoney={handleSendPocketMoney}
           onViewDependent={onViewDependent}
+          onOpenAddDependent={() => setIsAddDependentOpen(true)}
         />
       )}
 
@@ -239,6 +288,20 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         isOpen={isOcrOpen}
         onClose={() => setIsOcrOpen(false)}
         onConfirmReceipt={handleConfirmOcrReceipt}
+      />
+
+      <AccountDetailModal
+        isOpen={Boolean(selectedAccountForDetail)}
+        onClose={() => setSelectedAccountForDetail(null)}
+        account={selectedAccountForDetail}
+        state={state}
+        onOpenAddTransaction={() => setIsAddTxOpen(true)}
+      />
+
+      <AddDependentModal
+        isOpen={isAddDependentOpen}
+        onClose={() => setIsAddDependentOpen(false)}
+        onAddDependent={handleAddDependent}
       />
     </div>
   );

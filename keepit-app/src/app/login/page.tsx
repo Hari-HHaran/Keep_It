@@ -47,6 +47,12 @@ export default function LoginPage() {
     }
   }
 
+  function launchDemo() {
+    localStorage.setItem("keepit_demo_mode", "true");
+    document.cookie = "keepit_demo_mode=true; path=/; max-age=86400; SameSite=Lax";
+    router.push("/");
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#EDE4D6] p-4 text-[#1B1815]">
       <form onSubmit={login} className="w-full max-w-md rounded-[30px] border border-[#D6C9B4] bg-[#FFFDF8] p-7 shadow-xl">
@@ -55,7 +61,10 @@ export default function LoginPage() {
         <label className="mt-4 block text-xs font-bold">Password<input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1.5 w-full rounded-xl border border-[#D6C9B4] bg-white p-3 text-sm outline-none focus:border-[#0F4635]" /></label>
         {error && <div className="mt-4 rounded-xl bg-[#FAE3DD] p-3 text-xs text-[#8F2A17]">{error}</div>}
         <button disabled={loading} className="mt-5 w-full rounded-xl bg-[#0F4635] py-3 text-sm font-bold text-white disabled:opacity-50">{loading ? "Signing in…" : "Sign in"}</button>
-        <div className="mt-5 flex justify-between text-xs"><Link href="/register" className="font-bold text-[#0F4635] underline">Create account</Link><Link href="/register" className="text-[#6B6259]">Use demo fallback</Link></div>
+        <div className="mt-5 flex justify-between text-xs items-center">
+          <Link href="/register" className="font-bold text-[#0F4635] underline">Create account</Link>
+          <button type="button" onClick={launchDemo} className="text-[#6B6259] hover:text-[#0F4635] font-semibold">Use demo fallback →</button>
+        </div>
       </form>
     </main>
   );

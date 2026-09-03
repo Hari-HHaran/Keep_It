@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppState, GovernmentVoucher, LocationMerchant, SavingsGoal, Transaction } from "@/lib/types";
+import { AppState, GovernmentVoucher, HouseholdMember, LocationMerchant, SavingsGoal, Transaction } from "@/lib/types";
 import { loadSavedState, getSeedStateForPersona, saveState, addTransactionToState, redeemVoucherInState, claimNewVoucherInState } from "@/lib/storage";
-import { fetchHousehold, createTransaction, redeemVoucher, claimVoucher, saveGoal, depositGoal } from "@/lib/api";
+import { fetchHousehold, createTransaction, redeemVoucher, claimVoucher, saveGoal, depositGoal, addDependentMember } from "@/lib/api";
 import { Header } from "@/components/layout/Header";
 import { MobileContainer } from "@/components/layout/MobileContainer";
 import { BottomNavigation, NavTabType } from "@/components/layout/BottomNavigation";
@@ -139,6 +139,39 @@ export default function Home() {
     if (isLive) await runLiveMutation(() => depositGoal(memberId, goalId, amount));
   };
 
+  const handleAddDependent = async (
+    dependent: Omit<HouseholdMember, "id">,
+    goal?: Omit<SavingsGoal, "id">
+  ) => {
+    if (isLive) {
+      await runLiveMutation(() =>
+        addDependentMember({
+          name: dependent.name,
+          age: dependent.age || 11,
+          personalBalance: dependent.personalBalance || 0,
+          savingsGoal: goal,
+        })
+      );
+    } else {
+      const newDepId = `dep-${Date.now()}`;
+      const newMember: HouseholdMember = {
+        ...dependent,
+        id: newDepId,
+        savingsGoal: goal
+          ? {
+              ...goal,
+              id: `goal-${Date.now()}`,
+            }
+          : undefined,
+      };
+      updateLocal({
+        ...appState,
+        members: [...appState.members, newMember],
+        backendMode: "demo",
+      });
+    }
+  };
+
   const handleSelectLocation = (merchant: LocationMerchant | null) => {
     updateLocal({ ...appState, currentSimulatedLocation: merchant });
   };
@@ -206,6 +239,7 @@ export default function Home() {
             onCreateTransaction={handleCreateTransaction}
             onRedeemVoucher={handleRedeemVoucher}
             onAddVoucher={handleClaimVoucher}
+            onAddDependent={handleAddDependent}
             onSelectLocation={handleSelectLocation}
             onViewDependent={setSelectedDependentId}
             isOcrOpen={isOcrOpen}

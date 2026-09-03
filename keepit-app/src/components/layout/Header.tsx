@@ -55,15 +55,15 @@ export const Header: React.FC<HeaderProps> = ({
     },
   ];
 
-  const currentProfile = isLiveBackend
-    ? {
-        id: state.currentPersonaId,
-        name: state.householdName,
-        role: state.members.find((member) => member.id === state.currentMemberId)?.name || "Household member",
-        tag: "Supabase connected",
-        icon: Users,
-      }
-    : PROFILES.find((p) => p.id === state.currentPersonaId) || PROFILES[0];
+  const managerMember = state.members.find((member) => member.id === state.currentMemberId) || state.members.find((m) => m.role === "manager" || m.role === "co_manager") || state.members[0];
+
+  const currentProfile = {
+    id: state.currentPersonaId,
+    name: state.householdName || "My Household",
+    role: managerMember ? `${managerMember.name} (${managerMember.role})` : "Household Member",
+    tag: isLiveBackend ? "Supabase Synced" : "Local Household",
+    icon: Users,
+  };
 
   const isNotHome = activeTab !== "home";
 
@@ -169,9 +169,6 @@ export const Header: React.FC<HeaderProps> = ({
 
               {isLiveBackend && (
                 <>
-                  <div className="rounded-xl bg-[#DDE8E1] p-2.5 text-xs text-[#0F4635]">
-                    Changes are saved to Supabase and shared across signed-in devices.
-                  </div>
                   <button
                     onClick={() => {
                       onResetData();
@@ -179,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                     className="w-full rounded-xl px-2.5 py-2 text-left text-xs font-bold text-[#0F4635] hover:bg-[#F5F1E7]"
                   >
-                    Refresh backend data
+                    Resync data
                   </button>
                   <button
                     onClick={async () => {

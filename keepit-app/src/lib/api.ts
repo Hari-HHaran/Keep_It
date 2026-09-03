@@ -54,3 +54,11 @@ export function depositGoal(memberId: string, goalId: string, amount: number) {
     body: JSON.stringify({ action: "deposit", memberId, goalId, amount }),
   });
 }
+
+export function addDependentMember(data: { name: string; age: number; personalBalance: number; savingsGoal?: Omit<SavingsGoal, "id"> }) {
+  return request<{ state: AppState; memberId: string }>("/api/household", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
